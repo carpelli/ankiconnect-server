@@ -79,45 +79,8 @@ class MockQMessageBox(MinimalMock):
         print(f"ERROR: {title}: {message}")
 
 
-class MockMainWindow:
-    """Mock main window with minimal required attributes"""
-
-    def __init__(self):
-        self.col = None  # Will be set by AnkiConnectBridge
-        self.addonManager = MockAddonManager()
-        self.state = 'deckBrowser'
-
-    def isVisible(self):
-        return True
-
-    def close(self):
-        return True
-
-    def windowIcon(self):
-        return MinimalMock()
-
-
-class MockAddonManager:
-    """Mock addon manager with basic config functionality"""
-
-    def getConfig(self, addon_name):
-        # Return default AnkiConnect configuration
-        return {
-            'apiKey': None,
-            'apiLogPath': None,
-            'apiPollInterval': 25,
-            'apiVersion': 6,
-            'webBacklog': 5,
-            'webBindAddress': '127.0.0.1',
-            'webBindPort': 8765,
-            'webCorsOrigin': None,
-            'webCorsOriginList': ['http://localhost'],
-            'ignoreOriginList': [],
-            'webTimeout': 10000,
-        }
-
-    def writeConfig(self, addon_name, config):
-        pass
+# Note: Anki-specific mocks moved to anki_mocks.py
+# This file now contains only Qt/GUI components
 
 
 class MockDialogs:
@@ -141,7 +104,7 @@ class MockAqt:
 
     def __init__(self):
         self.appVersion = "25.2.6"
-        self.mw = MockMainWindow()
+        self.mw = None  # Will be set by anki_mocks.setup_anki_environment()
         self.dialogs = MockDialogs()
 
         # All other attributes return MinimalMock

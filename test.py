@@ -24,7 +24,6 @@ def test_gui_stubs_installation():
     # Check that aqt is available
     import aqt
     assert hasattr(aqt, 'appVersion')
-    assert hasattr(aqt, 'mw')
     assert hasattr(aqt, 'qt')
 
     print("✅ GUI stubs installed successfully")
@@ -62,15 +61,13 @@ def test_bridge_creation():
     try:
         from app import AnkiConnectBridge
 
-        # Mock the collection path to use our temporary file
-        with patch.object(AnkiConnectBridge, '_find_collection_path', return_value=tmp_path):
-            bridge = AnkiConnectBridge()
-            assert bridge is not None
-            assert hasattr(bridge, 'process_request')
-            print("✅ Bridge created successfully")
+        bridge = AnkiConnectBridge(tmp_path)
+        assert bridge is not None
+        assert hasattr(bridge, 'process_request')
+        print("✅ Bridge created successfully")
 
-            # Clean up
-            bridge.close()
+        # Clean up
+        bridge.close()
 
     finally:
         # Clean up temp file
@@ -81,63 +78,83 @@ def test_core_ankiconnect_methods():
     """Test that core AnkiConnect methods work"""
     print("Testing core AnkiConnect methods...")
 
-    from app import get_bridge
-    bridge = get_bridge()
+    with tempfile.NamedTemporaryFile(suffix='.anki2', delete=False) as tmp:
+        tmp_path = tmp.name
 
-    # Test version method
-    result = bridge.process_request({
-        'action': 'version',
-        'version': 6
-    })
-    assert result['result'] == 6
-    assert result['error'] is None
-    print("✅ Version method works")
+    try:
+        from app import AnkiConnectBridge
 
-    # Test deck names (should work even with empty collection)
-    result = bridge.process_request({
-        'action': 'deckNames',
-        'version': 6
-    })
-    assert 'result' in result
-    assert result['error'] is None
-    print("✅ DeckNames method works")
+        bridge = AnkiConnectBridge(tmp_path)
 
-    # Clean up
-    bridge.close()
+        # Test version method
+        result = bridge.process_request({
+            'action': 'version',
+            'version': 6
+        })
+        assert result['result'] == 6
+        assert result['error'] is None
+        print("✅ Version method works")
+
+        # Test deck names (should work even with empty collection)
+        result = bridge.process_request({
+            'action': 'deckNames',
+            'version': 6
+        })
+        assert 'result' in result
+        assert result['error'] is None
+        print("✅ DeckNames method works")
+
+        # Clean up
+        bridge.close()
+
+    finally:
+        # Clean up temp file
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 def test_gui_methods_fail_gracefully():
     """Test that GUI methods fail gracefully instead of crashing"""
     print("Testing GUI method graceful failure...")
 
-    from app import get_bridge
-    bridge = get_bridge()
+    with tempfile.NamedTemporaryFile(suffix='.anki2', delete=False) as tmp:
+        tmp_path = tmp.name
 
-    # Test GUI browse method - should not crash
-    result = bridge.process_request({
-        'action': 'guiBrowse',
-        'version': 6,
-        'params': {
-            'query': 'deck:Default'
-        }
-    })
-    # Should return something, not crash
-    assert 'result' in result
-    print("✅ guiBrowse fails gracefully")
+    try:
+        from app import AnkiConnectBridge
 
-    # Test permission request - should deny by default
-    result = bridge.process_request({
-        'action': 'requestPermission',
-        'version': 6,
-        'params': {
-            'origin': 'test-origin',
-            'allowed': False
-        }
-    })
-    assert 'result' in result
-    print("✅ requestPermission fails gracefully")
+        bridge = AnkiConnectBridge(tmp_path)
 
-    # Clean up
-    bridge.close()
+        # Test GUI browse method - should not crash
+        result = bridge.process_request({
+            'action': 'guiBrowse',
+            'version': 6,
+            'params': {
+                'query': 'deck:Default'
+            }
+        })
+        # Should return something, not crash
+        assert 'result' in result
+        print("✅ guiBrowse fails gracefully")
+
+        # Test permission request - should deny by default
+        result = bridge.process_request({
+            'action': 'requestPermission',
+            'version': 6,
+            'params': {
+                'origin': 'test-origin',
+                'allowed': False
+            }
+        })
+        assert 'result' in result
+        print("✅ requestPermission fails gracefully")
+
+        # Clean up
+        bridge.close()
+
+    finally:
+        # Clean up temp file
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 def test_qt_components():
     """Test that Qt components work as expected"""
@@ -178,11 +195,17 @@ def test_anki_integration():
     from anki.cards import Card
     print("✅ Anki core modules imported")
 
-    # Test that aqt.mw is available
-    import aqt
-    assert aqt.mw is not None
-    assert hasattr(aqt.mw, 'col')
-    print("✅ aqt.mw available")
+    # Test that aqt.mw can be set up
+    from app.anki_mocks import MockAnkiMainWindow, find_collection_path
+
+    collection_path = find_collection_path()
+    mock_mw = MockAnkiMainWindow(collection_path)
+    assert mock_mw is not None
+    assert hasattr(mock_mw, 'col')
+    print("✅ Anki environment setup works")
+
+    # Clean up
+    mock_mw.close()
 
 def test_flask_server():
     """Test that the Flask server can be created"""
