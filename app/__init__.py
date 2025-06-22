@@ -4,6 +4,11 @@ import types
 from typing import Optional
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+
+# Import GUI stubs before importing anything that uses aqt
+from .gui_stubs import install_gui_stubs
+install_gui_stubs()
+
 import aqt
 
 # Mock the necessary Anki environment for the plugin
