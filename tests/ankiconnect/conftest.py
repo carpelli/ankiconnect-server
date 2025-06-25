@@ -177,8 +177,6 @@ if 'aqt' not in sys.modules:
 
 # Create global instances that AnkiConnect tests expect
 ac = AnkiConnectWrapper()
-anki_version = (2, 1, 70)  # Mock version matching original
-
 
 # Utility functions from original conftest.py
 def wait(seconds):
