@@ -3,7 +3,9 @@ Simple configuration using environment variables.
 """
 
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def get_config():
     """Get configuration from environment variables with sensible defaults"""

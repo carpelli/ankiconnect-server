@@ -27,15 +27,7 @@ class AnkiConnectBridge:
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
 
-        # Add libs directory to path to fix import issues
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        libs_dir = os.path.join(current_dir, '..', 'libs')
-        libs_dir = os.path.abspath(libs_dir)
-        if libs_dir not in sys.path:
-            sys.path.insert(0, libs_dir)
-
-        # Import and initialize AnkiConnect
-        from ankiconnect.plugin import AnkiConnect
+        from libs.ankiconnect.plugin import AnkiConnect
         self.ankiconnect = AnkiConnect()
 
         # Initialize logging if needed
