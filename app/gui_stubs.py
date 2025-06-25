@@ -19,7 +19,7 @@ class MinimalMock:
         return MinimalMock()
 
     def __call__(self, *args, **kwargs):
-        # Allow the mock to be called
+        # Allow the mock to be called - just return self for chaining
         return MinimalMock()
 
     def __bool__(self):
@@ -27,6 +27,14 @@ class MinimalMock:
 
     def __str__(self):
         return f"MinimalMock({self.__class__.__name__})"
+
+    def append(self, *args, **kwargs):
+        """Handle list-like operations (e.g., hook registration)"""
+        pass
+
+    def remove(self, *args, **kwargs):
+        """Handle list-like operations"""
+        pass
 
 
 class InheritableMock:
@@ -99,6 +107,22 @@ class MockDialogs:
         pass
 
 
+class MockGuiHooks:
+    """Mock gui_hooks module with proper hook registration"""
+
+    def __init__(self):
+        self.browser_will_search = MinimalMock()
+        self.browser_did_change_row = MinimalMock()
+        self.operation_did_execute = MinimalMock()
+        self.editor_did_load_note = MinimalMock()
+        self.editor_did_init = MinimalMock()
+        self.editor_did_init_buttons = MinimalMock()
+
+    def __getattr__(self, name):
+        # Return a MinimalMock for any hook not explicitly defined
+        return MinimalMock()
+
+
 class MockAqt:
     """Main mock aqt module"""
 
@@ -108,7 +132,7 @@ class MockAqt:
         self.dialogs = MockDialogs()
 
         # All other attributes return MinimalMock
-        self.gui_hooks = MinimalMock()
+        self.gui_hooks = MockGuiHooks()
         self.utils = MinimalMock()
         self.editor = MinimalMock()
         self.editcurrent = type('EditCurrentModule', (), {'EditCurrent': InheritableMock})()
@@ -122,7 +146,7 @@ class MockAqt:
 
         # Qt submodule with essential components
         self.qt = type('MockQtModule', (), {
-            'Qt': MockQt,
+            'Qt': MinimalMock,
             'QTimer': MinimalMock,
             'QMessageBox': MockQMessageBox,
             'QCheckBox': MinimalMock,
@@ -154,6 +178,7 @@ def install_gui_stubs():
     sys.modules['aqt.utils'] = mock_aqt.utils
     sys.modules['aqt.import_export'] = mock_aqt.import_export
     sys.modules['aqt.import_export.importing'] = mock_aqt.import_export
+    sys.modules['aqt.gui_hooks'] = mock_aqt.gui_hooks
 
     return mock_aqt
 

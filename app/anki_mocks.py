@@ -8,6 +8,21 @@ import sys
 from .config import get_ankiconnect_config
 
 
+class MockProfileManager:
+    """Mock profile manager"""
+
+    def __init__(self):
+        self.name = "test_user"
+
+    def profiles(self):
+        """Return list of available profiles"""
+        return ["test_user"]
+
+    def __getattr__(self, name):
+        # Return reasonable defaults for any attribute
+        return None
+
+
 class MockAnkiMainWindow:
     """Mock Anki main window"""
 
@@ -15,10 +30,41 @@ class MockAnkiMainWindow:
         from anki.collection import Collection
         self.col = Collection(collection_path)
         self.addonManager = MockAddonManager()
+        self.pm = MockProfileManager()
+        self.progress = MockProgress()
+
+    def requireReset(self, reason=None, context=None):
+        """Mock requireReset method - does nothing in lightweight mode"""
+        pass
+
+    def reset(self):
+        """Mock reset method - does nothing in lightweight mode"""
+        pass
+
+    def unloadProfileAndShowProfileManager(self):
+        """Mock unload profile method"""
+        pass
+
+    def isVisible(self):
+        """Mock isVisible method"""
+        return True
 
     def close(self):
         if hasattr(self, 'col') and self.col:
             self.col.close()
+
+
+class MockProgress:
+    """Mock progress dialog"""
+
+    def update(self, label=None, value=None, process=True):
+        pass
+
+    def finish(self):
+        pass
+
+    def start(self, max=0, min=0, immediate=False):
+        pass
 
 
 class MockAddonManager:

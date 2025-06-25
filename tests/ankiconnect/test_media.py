@@ -1,0 +1,1 @@
+../../libs/ankiconnect/tests/test_media.py

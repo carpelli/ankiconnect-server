@@ -1,0 +1,1 @@
+../../libs/ankiconnect/tests/test_models.py
