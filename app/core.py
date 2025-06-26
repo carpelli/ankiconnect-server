@@ -2,13 +2,15 @@ from typing import Optional
 from typing_extensions import TYPE_CHECKING
 import sys
 
+import anki.lang
+
 # Import GUI stubs before importing anything that uses aqt
 from .gui_stubs import install_gui_stubs
 install_gui_stubs()
 
 from .anki_mocks import MockAnkiMainWindow, find_collection_path
 
-import aqt #type: ignore
+import aqt # type: ignore
 
 class AnkiConnectBridge:
     """
@@ -16,6 +18,8 @@ class AnkiConnectBridge:
     """
 
     def __init__(self, collection_path: Optional[str] = None):
+        anki.lang.set_lang('en') # TODO: Implement language selection
+
         # Set up the mock Anki environment
         self.collection_path = collection_path or find_collection_path()
         self.mock_mw = MockAnkiMainWindow(self.collection_path)
