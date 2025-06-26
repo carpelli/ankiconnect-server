@@ -23,12 +23,11 @@ class AnkiConnectBridge:
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
 
-        # Add libs to path and import AnkiConnect
-        import os
-        libs_path = os.path.join(os.path.dirname(__file__), '..', 'libs')
-        if libs_path not in sys.path:
-            sys.path.insert(0, libs_path)
-        from ankiconnect.plugin import AnkiConnect
+        sys.path.append('libs/ankiconnect')
+        if TYPE_CHECKING:
+            from libs.ankiconnect.plugin import AnkiConnect
+        else:
+            from plugin import AnkiConnect
         self.ankiconnect = AnkiConnect()
 
         # Initialize logging if needed
