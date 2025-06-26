@@ -1,54 +1,10 @@
-import os
-import sys
 from typing import Optional
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Import GUI stubs before importing anything that uses aqt
-from .gui_stubs import install_gui_stubs
-install_gui_stubs()
-
 # Import our simple config and Anki mocks
-from .config import get_config
-from .anki_mocks import MockAnkiMainWindow, find_collection_path
-
-import aqt
-
-class AnkiConnectBridge:
-    """
-    Minimal bridge that wraps the existing AnkiConnect plugin
-    """
-
-    def __init__(self, collection_path: Optional[str] = None):
-        # Set up the mock Anki environment
-        self.collection_path = collection_path or find_collection_path()
-        self.mock_mw = MockAnkiMainWindow(self.collection_path)
-
-        # Patch aqt.mw to point to our mock
-        aqt.mw = self.mock_mw
-
-        from libs.ankiconnect.plugin import AnkiConnect
-        self.ankiconnect = AnkiConnect()
-
-        # Initialize logging if needed
-        try:
-            self.ankiconnect.initLogging()
-        except:
-            pass
-
-    def process_request(self, request_data: dict) -> dict:
-        """Process an AnkiConnect request using the original plugin"""
-        try:
-            # Use the original AnkiConnect handler
-            return self.ankiconnect.handler(request_data)
-        except Exception as e:
-            # Return error in AnkiConnect format
-            return {"result": None, "error": str(e)}
-
-    def close(self):
-        """Clean up resources"""
-        if hasattr(self, 'mock_mw'):
-            self.mock_mw.close()
+from app.core import AnkiConnectBridge
+from app.config import get_config
 
 # Get config
 config = get_config()
@@ -122,11 +78,11 @@ def run_server(host: Optional[str] = None, port: Optional[int] = None, debug: Op
     try:
         # Run Flask in single-threaded mode to match AnkiConnect's behavior
         # This prevents concurrent access to the Anki database
-        app.run(host=host, port=port, debug=debug, threaded=False)
+        app.run(host=host, port=port, threaded=False)
     finally:
         # Clean up on shutdown
         if bridge_instance:
             bridge_instance.close()
 
 if __name__ == "__main__":
-    run_server(debug=True)
+    run_server()

@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import pytest
 
+sys.path.append('libs/ankiconnect')
+
 # Add project root to Python path for imports
 # Handle both cases: running from project root or from ankiconnect/tests directory
 current_file = Path(__file__).resolve()
@@ -36,7 +38,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 # Import our bridge after path setup
-from app import AnkiConnectBridge
+from app.core import AnkiConnectBridge
 
 # Global bridge instance for tests
 _bridge = None
