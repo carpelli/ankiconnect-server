@@ -27,7 +27,7 @@ def get_bridge():
 def handle_request():
     """Handle AnkiConnect API requests"""
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
         if not data:
             return jsonify({"result": None, "error": "No JSON data received"})
 
