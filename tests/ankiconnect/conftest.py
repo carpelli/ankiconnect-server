@@ -9,7 +9,7 @@ Key features:
 - Drop-in replacement for original AnkiConnect conftest.py
 - Provides same interface and fixtures as original
 - Uses AnkiConnectBridge instead of full Anki GUI
-- Mocks GUI components for headless testing
+- Reuses existing mock implementations from app/
 - Maintains compatibility with all original test expectations
 """
 
@@ -20,7 +20,6 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from types import ModuleType
 import pytest
 
 from app.gui_stubs import install_gui_stubs
@@ -31,29 +30,15 @@ from app.core import AnkiConnectBridge
 # Add paths so test files can import plugin and conftest
 sys.path.extend(['libs/ankiconnect', str(Path(__file__).parent)])
 
-# Global bridge instance for tests
-_bridge = None
-_temp_base_dir = None
-
-
-def get_bridge():
-    """Get or create the bridge instance"""
-    global _bridge, _temp_base_dir
-    if _bridge is None:
-        # Create temporary collection for testing
-        _temp_base_dir = tempfile.mkdtemp()
-        collection_path = os.path.join(_temp_base_dir, "test_collection.anki2")
-        _bridge = AnkiConnectBridge(collection_path=collection_path)
-        # Add base attribute to match original session interface
-        _bridge.base = _temp_base_dir
-    return _bridge
-
 
 class AnkiConnectWrapper:
     """Wrapper that provides the same interface as original AnkiConnect tests expect"""
 
     def __init__(self):
-        self.bridge = get_bridge()
+        temp_dir = tempfile.mkdtemp()
+        collection_path = os.path.join(temp_dir, "test_collection.anki2")
+        self.bridge = AnkiConnectBridge(collection_path=collection_path)
+        setattr(self.bridge, 'base', temp_dir)  # Match original session interface
         self._ac = self.bridge.ankiconnect
 
     def __getattr__(self, name):
@@ -67,113 +52,14 @@ class AnkiConnectWrapper:
         return self._ac.collection()
 
 
-# Mock aqt module structure to satisfy imports
-class MockAqtModule(ModuleType):
-    """Mock aqt module with necessary structure"""
-    
-    def __init__(self, name):
-        super().__init__(name)
-        self.mw = MockMainWindow()
-
-
-class MockMainWindow:
-    """Mock main window with minimal required interface"""
-    
-    def __init__(self):
-        self.pm = MockProfileManager()
-        self.progress = MockProgressDialog()
-        self.taskman = MockTaskManager()
-
-    def checkpoint(self, name):
-        pass
-
-    def reset(self):
-        pass
-
-    def requireReset(self, modal=False):
-        pass
-
-    def unloadProfileAndShowProfileManager(self):
-        pass
-
-
-class MockProfileManager:
-    """Mock profile manager"""
-    
-    def __init__(self):
-        self.name = "test_profile"
-
-    def profiles(self):
-        return ["test_profile"]
-
-    def setMeta(self, key, value):
-        pass
-
-
-class MockProgressDialog:
-    """Mock progress dialog"""
-    
-    def __init__(self):
-        self.value = 0
-        self.max = 100
-        self._label = ""
-
-    def update(self, value=None, label=None):
-        if value is not None:
-            self.value = value
-        if label is not None:
-            self._label = label
-
-    def finish(self):
-        pass
-
-    def setCancelable(self, cancelable):
-        pass
-
-
-class MockTaskManager:
-    """Mock task manager for background operations"""
-    
-    def run_in_background(self, task, on_done=None, kwargs=None):
-        """Execute task synchronously (no background threading needed)"""
-        import concurrent.futures
-        future = concurrent.futures.Future()
-
-        try:
-            result = task(**kwargs if kwargs is not None else {})
-            future.set_result(result)
-        except BaseException as e:
-            future.set_exception(e)
-
-        if on_done is not None:
-            on_done(future)
-
-
-# Set up mock aqt module in sys.modules to satisfy imports
-if 'aqt' not in sys.modules:
-    mock_aqt = MockAqtModule('aqt')
-    sys.modules['aqt'] = mock_aqt
-
 # Create global instances that AnkiConnect tests expect
 ac = AnkiConnectWrapper()
+
 
 # Utility functions from original conftest.py
 def wait(seconds):
     """Wait function - simplified without Qt"""
     time.sleep(seconds)
-
-
-def wait_until(booleanish_function, at_most_seconds=30):
-    """Wait until condition is met"""
-    deadline = time.time() + at_most_seconds
-
-    while time.time() < deadline:
-        if booleanish_function():
-            return
-        time.sleep(0.01)
-
-    raise Exception(f"Function {booleanish_function} never returned "
-                   f"a positive value in {at_most_seconds} seconds")
 
 
 def delete_model(model_name):
@@ -184,16 +70,6 @@ def delete_model(model_name):
             ac.collection().models.remove(model["id"])
     except:
         pass  # Model might not exist
-
-
-def close_all_dialogs_and_wait_for_them_to_run_closing_callbacks():
-    """Mock function - no dialogs in lightweight mode"""
-    pass
-
-
-def get_dialog_instance(name):
-    """Mock function - no dialogs in lightweight mode"""
-    return None
 
 
 @contextmanager
@@ -213,13 +89,10 @@ def current_decks_and_models_etc_preserved():
             deck_names_after = set(ac.deckNames())
             model_names_after = set(ac.modelNames())
 
-            deck_names_to_delete = deck_names_after - deck_names_before
-            model_names_to_delete = model_names_after - model_names_before
-
-            if deck_names_to_delete:
-                ac.deleteDecks(decks=list(deck_names_to_delete), cardsToo=True)
-
-            for model_name in model_names_to_delete:
+            # Clean up new decks and models
+            for deck_name in deck_names_after - deck_names_before:
+                ac.deleteDecks(decks=[deck_name], cardsToo=True)
+            for model_name in model_names_after - model_names_before:
                 delete_model(model_name)
 
             # Try to trigger deck browser refresh (matches original)
@@ -291,35 +164,11 @@ def anki_connect_config_loaded(session, web_bind_port):
     yield
 
 
-@contextmanager
-def waitress_patched_to_prevent_it_from_dying():
-    """Mock waitress patching - not needed in lightweight mode"""
-    yield
-
-
-@contextmanager
-def anki_patched_to_prevent_backups():
-    """Mock backup prevention - not needed in lightweight mode"""
-    yield
-
-
-@contextmanager
-def empty_anki_session_started():
-    """Mock empty session context manager"""
-    yield get_bridge()
-
-
-@contextmanager
-def profile_created_and_loaded(session):
-    """Mock profile loading context manager"""
-    yield session
-
-
 # Pytest fixtures matching original conftest.py interface
 @pytest.fixture(scope="session")
 def session_scope_empty_session():
     """Session-scoped empty session fixture"""
-    yield get_bridge()
+    yield ac.bridge
 
 
 @pytest.fixture(scope="session")
@@ -346,14 +195,6 @@ def setup(session_with_profile_loaded):
         pass
 
     yield set_up_test_deck_and_test_model_and_two_notes()
-    close_all_dialogs_and_wait_for_them_to_run_closing_callbacks()
-
-
-@pytest.fixture(autouse=True)
-def run_background_tasks_on_main_thread(monkeypatch):
-    """Mock background task execution - auto-use fixture"""
-    # This fixture is automatically applied to all tests
-    pass
 
 
 # Pytest configuration hooks
