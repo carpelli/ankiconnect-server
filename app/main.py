@@ -13,9 +13,6 @@ config = get_config()
 app = Flask(__name__)
 CORS(app, origins=config['cors_origins'])
 
-# Create bridge instance at module level - more Pythonic than Singleton pattern
-bridge = AnkiConnectBridge()
-
 @app.route("/", methods=["POST"])
 def handle_request():
     """Handle AnkiConnect API requests"""
@@ -75,4 +72,5 @@ def run_server(host: Optional[str] = None, port: Optional[int] = None, debug: Op
         bridge.close()
 
 if __name__ == "__main__":
+    bridge = AnkiConnectBridge()
     run_server()
