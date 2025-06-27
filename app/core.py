@@ -4,6 +4,8 @@ import sys
 
 import anki.lang
 
+from app.config import get_config
+
 # Import GUI stubs before importing anything that uses aqt
 from .gui_stubs import install_gui_stubs
 install_gui_stubs()
@@ -21,7 +23,7 @@ class AnkiConnectBridge:
         anki.lang.set_lang('en') # TODO: Implement language selection
 
         # Set up the mock Anki environment
-        self.collection_path = collection_path or find_collection_path()
+        self.collection_path = collection_path or get_config()['collection_path'] or find_collection_path()
         self.mock_mw = MockAnkiMainWindow(self.collection_path)
 
         # Patch aqt.mw to point to our mock
