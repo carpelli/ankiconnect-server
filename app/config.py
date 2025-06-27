@@ -3,11 +3,12 @@ Simple configuration using environment variables.
 """
 
 import os
+from typing import Dict, Any
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_config():
+def get_config() -> Dict[str, Any]:
     """Get configuration from environment variables with sensible defaults"""
     return {
         # Server settings
@@ -27,7 +28,7 @@ def get_config():
     }
 
 
-def get_ankiconnect_config():
+def get_ankiconnect_config() -> Dict[str, Any]:
     """Get configuration in AnkiConnect plugin format"""
     config = get_config()
     return {

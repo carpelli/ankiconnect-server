@@ -1,50 +1,48 @@
 """
-Minimal GUI stubs to replace aqt dependencies.
+Simplified GUI stubs to replace aqt dependencies.
 These stubs provide just enough functionality to allow imports and basic instantiation,
 while GUI method requests fail gracefully at the API level.
 """
 
+import logging
 import sys
-from unittest.mock import MagicMock
+from types import ModuleType
+from typing import Any, Union
+
+logger = logging.getLogger(__name__)
 
 
 class MinimalMock:
     """Base class for minimal mocks that can be instantiated and have basic attributes"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def __getattr__(self, name):
-        # Return another MinimalMock for any attribute access
+    def __getattr__(self, name: str) -> 'MinimalMock':
+        """Return another MinimalMock for any attribute access"""
         return MinimalMock()
 
-    def __call__(self, *args, **kwargs):
-        # Allow the mock to be called - just return self for chaining
+    def __call__(self, *args: Any, **kwargs: Any) -> 'MinimalMock':
+        """Allow the mock to be called - just return self for chaining"""
         return MinimalMock()
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return True
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"MinimalMock({self.__class__.__name__})"
 
-    def append(self, *args, **kwargs):
+    def __contains__(self, item: Any) -> bool:
+        """Support 'in' operator - always return False for membership tests"""
+        return False
+
+    def append(self, *args: Any, **kwargs: Any) -> None:
         """Handle list-like operations (e.g., hook registration)"""
         pass
 
-    def remove(self, *args, **kwargs):
+    def remove(self, *args: Any, **kwargs: Any) -> None:
         """Handle list-like operations"""
         pass
-
-
-class InheritableMock:
-    """Mock class that can be inherited from"""
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __getattr__(self, name):
-        return MinimalMock()
 
 
 class MockQt:
@@ -63,7 +61,7 @@ class MockQt:
 
 
 class MockQMessageBox(MinimalMock):
-    """Mock QMessageBox - just needs the constants for comparisons"""
+    """Mock QMessageBox with essential constants"""
 
     class Icon:
         Question = 4
@@ -77,40 +75,21 @@ class MockQMessageBox(MinimalMock):
         Ok = 0x00000400
         Cancel = 0x00400000
 
-    def exec(self):
-        # Always return "No" to deny permissions by default
+    def exec(self) -> int:
+        """Always return "No" to deny permissions by default"""
         return self.StandardButton.No
 
     @staticmethod
-    def critical(parent, title, message):
-        # Just print instead of showing dialog
-        print(f"ERROR: {title}: {message}")
-
-
-# Note: Anki-specific mocks moved to anki_mocks.py
-# This file now contains only Qt/GUI components
-
-
-class MockDialogs:
-    """Mock dialogs system"""
-
-    def __init__(self):
-        self._dialogs = {}
-
-    def open(self, dialog_name, *args, **kwargs):
-        return MinimalMock()
-
-    def register_dialog(self, tag, dialog_class):
-        self._dialogs[tag] = (dialog_class, None)
-
-    def markClosed(self, tag):
-        pass
+    def critical(parent: Any, title: str, message: str) -> None:
+        """Log critical messages instead of showing dialog"""
+        logger.error(f"QMessageBox.critical: {title}: {message}")
 
 
 class MockGuiHooks:
-    """Mock gui_hooks module with proper hook registration"""
+    """Simplified mock gui_hooks module"""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        # Initialize common hooks as MinimalMock instances
         self.browser_will_search = MinimalMock()
         self.browser_did_change_row = MinimalMock()
         self.operation_did_execute = MinimalMock()
@@ -118,67 +97,84 @@ class MockGuiHooks:
         self.editor_did_init = MinimalMock()
         self.editor_did_init_buttons = MinimalMock()
 
-    def __getattr__(self, name):
-        # Return a MinimalMock for any hook not explicitly defined
+    def __getattr__(self, name: str) -> MinimalMock:
+        """Return a MinimalMock for any hook not explicitly defined"""
         return MinimalMock()
 
 
-class MockAqt:
-    """Main mock aqt module"""
+def create_mock_module(name: str, **attrs) -> Any:
+    """Helper function to create mock modules"""
+    return type(name, (), attrs)()
 
-    def __init__(self):
+
+class MockAqt:
+    """Simplified mock aqt module"""
+
+    def __init__(self) -> None:
         self.appVersion = "25.2.6"
         self.mw = None  # Will be set by anki_mocks.setup_anki_environment()
-        self.dialogs = MockDialogs()
-
-        # All other attributes return MinimalMock
+        self.dialogs = MinimalMock()
         self.gui_hooks = MockGuiHooks()
+        
+        # Create minimal submodules
         self.utils = MinimalMock()
         self.editor = MinimalMock()
-        self.editcurrent = type('EditCurrentModule', (), {'EditCurrent': InheritableMock})()
         self.forms = MinimalMock()
-        self.browser = type('BrowserModule', (), {
-            'previewer': type('PreviewerModule', (), {
-                'MultiCardPreviewer': InheritableMock
-            })()
-        })()
         self.import_export = MinimalMock()
+        
+        # Create Qt submodule
+        self.qt = create_mock_module('MockQtModule',
+            Qt=MockQt,
+            QTimer=MinimalMock,
+            QMessageBox=MockQMessageBox,
+            QCheckBox=MinimalMock,
+            QKeySequence=MinimalMock,
+            QShortcut=MinimalMock,
+            QCloseEvent=MinimalMock,
+            QMainWindow=MinimalMock,
+        )
 
-        # Qt submodule with essential components
-        self.qt = type('MockQtModule', (), {
-            'Qt': MinimalMock,
-            'QTimer': MinimalMock,
-            'QMessageBox': MockQMessageBox,
-            'QCheckBox': MinimalMock,
-            'QKeySequence': MinimalMock,
-            'QShortcut': MinimalMock,
-            'QCloseEvent': MinimalMock,
-            'QMainWindow': MinimalMock,
-        })()
+        # Create previewer module first
+        self._previewer_module = create_mock_module('PreviewerModule',
+            MultiCardPreviewer=MinimalMock
+        )
+        
+        # Create browser submodule with previewer
+        self.browser = create_mock_module('BrowserModule',
+            previewer=self._previewer_module
+        )
+
+        # Create editcurrent submodule
+        self.editcurrent = create_mock_module('EditCurrentModule',
+            EditCurrent=MinimalMock
+        )
 
 
-def install_gui_stubs():
-    """Install minimal GUI stubs by patching sys.modules"""
-
+def install_gui_stubs() -> Union[MockAqt, ModuleType]:
+    """
+    Install simplified GUI stubs by patching sys.modules.
+    
+    Returns:
+        The mock aqt module instance
+    """
     if 'aqt' in sys.modules:
+        logger.debug("aqt module already exists, returning existing instance")
         return sys.modules['aqt']
 
     # Create mock aqt module
     mock_aqt = MockAqt()
 
     # Install main modules
-    sys.modules['aqt'] = mock_aqt
-    sys.modules['aqt.qt'] = mock_aqt.qt
-    sys.modules['aqt.editor'] = mock_aqt.editor
-    sys.modules['aqt.editcurrent'] = mock_aqt.editcurrent
-    sys.modules['aqt.forms'] = mock_aqt.forms
-    sys.modules['aqt.forms.editcurrent'] = mock_aqt.forms
-    sys.modules['aqt.browser'] = mock_aqt.browser
-    sys.modules['aqt.browser.previewer'] = mock_aqt.browser
-    sys.modules['aqt.utils'] = mock_aqt.utils
-    sys.modules['aqt.import_export'] = mock_aqt.import_export
-    sys.modules['aqt.import_export.importing'] = mock_aqt.import_export
-    sys.modules['aqt.gui_hooks'] = mock_aqt.gui_hooks
+    sys.modules['aqt'] = mock_aqt  # type: ignore
+    sys.modules['aqt.qt'] = mock_aqt.qt  # type: ignore
+    sys.modules['aqt.editor'] = mock_aqt.editor  # type: ignore
+    sys.modules['aqt.editcurrent'] = mock_aqt.editcurrent  # type: ignore
+    sys.modules['aqt.forms'] = mock_aqt.forms  # type: ignore
+    sys.modules['aqt.browser'] = mock_aqt.browser  # type: ignore
+    sys.modules['aqt.browser.previewer'] = mock_aqt._previewer_module  # type: ignore
+    sys.modules['aqt.utils'] = mock_aqt.utils  # type: ignore
+    sys.modules['aqt.import_export'] = mock_aqt.import_export  # type: ignore
+    sys.modules['aqt.gui_hooks'] = mock_aqt.gui_hooks  # type: ignore
 
     return mock_aqt
 

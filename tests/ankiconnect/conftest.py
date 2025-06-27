@@ -51,6 +51,11 @@ class AnkiConnectWrapper:
         """Return the collection for direct access"""
         return self._ac.collection()
 
+    def close(self):
+        """Close the bridge and clean up resources"""
+        if hasattr(self, 'bridge'):
+            self.bridge.close()
+
 
 # Create global instances that AnkiConnect tests expect
 ac = AnkiConnectWrapper()
@@ -198,6 +203,9 @@ def setup(session_with_profile_loaded):
 
 
 # Pytest configuration hooks
-def pytest_report_header(config):
-    """Report test configuration"""
-    return "AnkiConnect lightweight server mode; using temporary collection"
+def pytest_sessionfinish(session, exitstatus):
+    """Clean up resources when test session ends"""
+    try:
+        ac.close()
+    except:
+        pass  # Best effort cleanup

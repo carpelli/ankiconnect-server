@@ -23,6 +23,29 @@ class MockProfileManager:
         return None
 
 
+class MockProgress:
+    """Mock progress dialog"""
+
+    def update(self, label=None, value=None, process=True):
+        pass
+
+    def finish(self):
+        pass
+
+    def start(self, max=0, min=0, immediate=False):
+        pass
+
+
+class MockAddonManager:
+    """Mock addon manager"""
+
+    def getConfig(self, name):
+        return get_ankiconnect_config()
+
+    def writeConfig(self, addon_name, config):
+        pass
+
+
 class MockAnkiMainWindow:
     """Mock Anki main window"""
 
@@ -54,29 +77,6 @@ class MockAnkiMainWindow:
             self.col.close()
 
 
-class MockProgress:
-    """Mock progress dialog"""
-
-    def update(self, label=None, value=None, process=True):
-        pass
-
-    def finish(self):
-        pass
-
-    def start(self, max=0, min=0, immediate=False):
-        pass
-
-
-class MockAddonManager:
-    """Mock addon manager"""
-
-    def getConfig(self, name):
-        return get_ankiconnect_config()
-
-    def writeConfig(self, addon_name, config):
-        pass
-
-
 def find_collection_path():
     """Find the default Anki collection path"""
     # Check environment variable first
@@ -96,6 +96,15 @@ def find_collection_path():
     user1_path = os.path.join(base_path, "User 1", "collection.anki2")
     if os.path.exists(user1_path):
         return user1_path
+
+    # If User 1 doesn't exist, look for any profile
+    if os.path.exists(base_path):
+        for profile_dir in os.listdir(base_path):
+            profile_path = os.path.join(base_path, profile_dir)
+            if os.path.isdir(profile_path):
+                collection_path = os.path.join(profile_path, "collection.anki2")
+                if os.path.exists(collection_path):
+                    return collection_path
 
     # Return the expected path anyway
     return user1_path
