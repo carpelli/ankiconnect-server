@@ -13,15 +13,8 @@ config = get_config()
 app = Flask(__name__)
 CORS(app, origins=config['cors_origins'])
 
-# Global bridge instance
-bridge = None
-
-def get_bridge():
-    """Get or create the bridge instance"""
-    global bridge
-    if bridge is None:
-        bridge = AnkiConnectBridge()
-    return bridge
+# Create bridge instance at module level - more Pythonic than Singleton pattern
+bridge = AnkiConnectBridge()
 
 @app.route("/", methods=["POST"])
 def handle_request():
@@ -38,7 +31,7 @@ def handle_request():
                 return jsonify({"result": None, "error": "Invalid API key"}), 403
 
         # Process the request using the original AnkiConnect plugin
-        result = get_bridge().process_request(data)
+        result = bridge.process_request(data)
         return jsonify(result)
 
     except Exception as e:
@@ -47,11 +40,10 @@ def handle_request():
 @app.route("/health", methods=["GET"])
 def health_check():
     """Health check endpoint"""
-    bridge_instance = get_bridge()
     return jsonify({
         "status": "ok",
         "version": "1.0.0",
-        "collection_path": bridge_instance.collection_path,
+        "collection_path": bridge.collection_path,
         "api_key_set": bool(config['api_key'])
     })
 
@@ -65,8 +57,7 @@ def run_server(host: Optional[str] = None, port: Optional[int] = None, debug: Op
 
     print(f"Starting AnkiConnect Bridge on {host}:{port}")
 
-    bridge_instance = get_bridge()
-    print(f"Collection path: {bridge_instance.collection_path}")
+    print(f"Collection path: {bridge.collection_path}")
 
     if config['api_key']:
         print("🔐 API key authentication enabled")
@@ -81,8 +72,7 @@ def run_server(host: Optional[str] = None, port: Optional[int] = None, debug: Op
         app.run(host=host, port=port, threaded=False)
     finally:
         # Clean up on shutdown
-        if bridge_instance:
-            bridge_instance.close()
+        bridge.close()
 
 if __name__ == "__main__":
     run_server()
