@@ -22,28 +22,23 @@ from dataclasses import dataclass
 from pathlib import Path
 import pytest
 
+from app.gui_stubs import install_gui_stubs
+install_gui_stubs()
+
+from app.core import AnkiConnectBridge
+
+# so the test files can import plugin
 sys.path.append('libs/ankiconnect')
-
-# Add project root to Python path for imports
-# Handle both cases: running from project root or from ankiconnect/tests directory
-current_file = Path(__file__).resolve()
-if 'libs/ankiconnect/tests' in str(current_file):
-    # We're in libs/ankiconnect/tests, go up 4 levels to project root
-    project_root = current_file.parent.parent.parent.parent
-else:
-    # We're in project root
-    project_root = current_file.parent
-
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# so the test files can import conftest
+sys.path.append(str(Path(__file__).parent))
 
 # Import our bridge after path setup
-from app.core import AnkiConnectBridge
+
+anki_version = (25, 6, 1) # TODO fix, importing results in circular import
 
 # Global bridge instance for tests
 _bridge = None
 _temp_base_dir = None
-
 
 def get_bridge():
     """Get or create the bridge instance"""
