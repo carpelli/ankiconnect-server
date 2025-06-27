@@ -20,6 +20,7 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 import pytest
 
 from app.gui_stubs import install_gui_stubs
@@ -27,18 +28,13 @@ install_gui_stubs()
 
 from app.core import AnkiConnectBridge
 
-# so the test files can import plugin
-sys.path.append('libs/ankiconnect')
-# so the test files can import conftest
-sys.path.append(str(Path(__file__).parent))
-
-# Import our bridge after path setup
-
-anki_version = (25, 6, 1) # TODO fix, importing results in circular import
+# Add paths so test files can import plugin and conftest
+sys.path.extend(['libs/ankiconnect', str(Path(__file__).parent)])
 
 # Global bridge instance for tests
 _bridge = None
 _temp_base_dir = None
+
 
 def get_bridge():
     """Get or create the bridge instance"""
@@ -71,28 +67,52 @@ class AnkiConnectWrapper:
         return self._ac.collection()
 
 
-# Mock classes for GUI functionality that AnkiConnect tests might expect
-class MockTaskManager:
-    """Mock task manager for background operations"""
+# Mock aqt module structure to satisfy imports
+class MockAqtModule(ModuleType):
+    """Mock aqt module with necessary structure"""
+    
+    def __init__(self, name):
+        super().__init__(name)
+        self.mw = MockMainWindow()
 
-    def run_in_background(self, task, on_done=None, kwargs=None):
-        """Execute task synchronously (no background threading needed)"""
-        import concurrent.futures
-        future = concurrent.futures.Future()
 
-        try:
-            result = task(**kwargs if kwargs is not None else {})
-            future.set_result(result)
-        except BaseException as e:
-            future.set_exception(e)
+class MockMainWindow:
+    """Mock main window with minimal required interface"""
+    
+    def __init__(self):
+        self.pm = MockProfileManager()
+        self.progress = MockProgressDialog()
+        self.taskman = MockTaskManager()
 
-        if on_done is not None:
-            on_done(future)
+    def checkpoint(self, name):
+        pass
+
+    def reset(self):
+        pass
+
+    def requireReset(self, modal=False):
+        pass
+
+    def unloadProfileAndShowProfileManager(self):
+        pass
+
+
+class MockProfileManager:
+    """Mock profile manager"""
+    
+    def __init__(self):
+        self.name = "test_profile"
+
+    def profiles(self):
+        return ["test_profile"]
+
+    def setMeta(self, key, value):
+        pass
 
 
 class MockProgressDialog:
-    """Mock progress dialog for operations that show progress"""
-
+    """Mock progress dialog"""
+    
     def __init__(self):
         self.value = 0
         self.max = 100
@@ -111,66 +131,28 @@ class MockProgressDialog:
         pass
 
 
-class MockProfileManager:
-    """Mock profile manager"""
+class MockTaskManager:
+    """Mock task manager for background operations"""
+    
+    def run_in_background(self, task, on_done=None, kwargs=None):
+        """Execute task synchronously (no background threading needed)"""
+        import concurrent.futures
+        future = concurrent.futures.Future()
 
-    def __init__(self):
-        self.name = "test_profile"
+        try:
+            result = task(**kwargs if kwargs is not None else {})
+            future.set_result(result)
+        except BaseException as e:
+            future.set_exception(e)
 
-    def profiles(self):
-        return ["test_profile"]
-
-    def setMeta(self, key, value):
-        pass
-
-
-class MockMainWindow:
-    """Mock main window"""
-
-    def __init__(self):
-        self.pm = MockProfileManager()
-        self.progress = MockProgressDialog()
-        self.taskman = MockTaskManager()
-
-    def checkpoint(self, name):
-        pass
-
-    def reset(self):
-        pass
-
-    def requireReset(self, modal=False):
-        pass
-
-
-# Mock aqt module structure to satisfy imports
-class MockAqtOperationsNote:
-    @staticmethod
-    def add_note(*args, **kwargs):
-        pass
-
-    @staticmethod
-    def update_note(*args, **kwargs):
-        pass
-
-
-class MockAqtOperations:
-    note = MockAqtOperationsNote
-
-
-class MockAqt:
-    """Mock aqt module with necessary structure"""
-    operations = MockAqtOperations
-
-    def __init__(self):
-        self.mw = MockMainWindow()
+        if on_done is not None:
+            on_done(future)
 
 
 # Set up mock aqt module in sys.modules to satisfy imports
 if 'aqt' not in sys.modules:
-    mock_aqt = MockAqt()
+    mock_aqt = MockAqtModule('aqt')
     sys.modules['aqt'] = mock_aqt
-    sys.modules['aqt.operations'] = MockAqtOperations
-    sys.modules['aqt.operations.note'] = MockAqtOperationsNote
 
 # Create global instances that AnkiConnect tests expect
 ac = AnkiConnectWrapper()
@@ -360,7 +342,7 @@ def setup(session_with_profile_loaded):
     try:
         from plugin.edit import Edit
         Edit.register_with_anki()
-    except:
+    except ImportError:
         pass
 
     yield set_up_test_deck_and_test_model_and_two_notes()
@@ -378,8 +360,3 @@ def run_background_tasks_on_main_thread(monkeypatch):
 def pytest_report_header(config):
     """Report test configuration"""
     return "AnkiConnect lightweight server mode; using temporary collection"
-
-
-# Additional globals that might be referenced by original tests
-# These are available at module level for direct import by test files
-# (This matches the interface that original AnkiConnect tests expect)
