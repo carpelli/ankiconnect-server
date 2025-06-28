@@ -2,13 +2,14 @@ import logging
 from typing import Optional
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from waitress import serve
 
 from app.core import AnkiConnectBridge
 from app.config import get_config
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -20,18 +21,14 @@ config = get_config()
 app = Flask(__name__)
 CORS(app, origins=config['cors_origins'])
 
-# Global bridge instance (will be set in run_server)
-bridge = None
+# Global bridge instance
+bridge: AnkiConnectBridge
 
 @app.route("/", methods=["POST"])
 def handle_request():
     """Handle AnkiConnect API requests"""
     global bridge
     try:
-        if bridge is None:
-            logger.error("Bridge not initialized")
-            return jsonify({"result": None, "error": "Server not properly initialized"}), 500
-            
         data = request.get_json(force=True)
         if not data:
             logger.warning("No JSON data received in request")
@@ -51,18 +48,9 @@ def handle_request():
 
     except Exception as e:
         logger.error(f"Error processing request: {e}", exc_info=True)
-        return jsonify({"result": None, "error": str(e)}), 500
-
-@app.route("/health", methods=["GET"])
-def health_check():
-    """Health check endpoint"""
-    global bridge
-    return jsonify({
-        "status": "ok",
-        "version": "1.0.0",
-        "collection_path": bridge.collection_path if bridge else None,
-        "api_key_set": bool(config['api_key'])
-    })
+        # Return error in AnkiConnect format (same as original)
+        error_response = {"result": None, "error": str(e)}
+        return jsonify(error_response), 500
 
 def run_server(host: Optional[str] = None, port: Optional[int] = None, debug: Optional[bool] = None):
     """Run the AnkiConnect bridge server"""
@@ -75,25 +63,28 @@ def run_server(host: Optional[str] = None, port: Optional[int] = None, debug: Op
 
     logger.info(f"Starting AnkiConnect Bridge on {host}:{port}")
 
-    # Use context manager for automatic cleanup
-    with AnkiConnectBridge() as bridge:
-        logger.info(f"Collection path: {bridge.collection_path}")
+    # Initialize the bridge
+    bridge = AnkiConnectBridge()
+    logger.info(f"Collection path: {bridge.collection_path}")
 
-        if config['api_key']:
-            logger.info("🔐 API key authentication enabled")
-        else:
-            logger.warning("⚠️ No API key set (consider setting ANKICONNECT_API_KEY)")
+    if config['api_key']:
+        logger.info("🔐 API key authentication enabled")
+    else:
+        logger.warning("⚠️ No API key set (consider setting ANKICONNECT_API_KEY)")
 
-        logger.info("Running in single-threaded mode (like original AnkiConnect)")
+    logger.info("Using Flask with waitress (production-ready, single-threaded)")
 
-        try:
-            # Run Flask in single-threaded mode to match AnkiConnect's behavior
-            # This prevents concurrent access to the Anki database
-            app.run(host=host, port=port, threaded=False, debug=debug, use_reloader=False)
-        except KeyboardInterrupt:
-            logger.info("Server stopped by user")
-        except Exception as e:
-            logger.error(f"Server error: {e}", exc_info=True)
+    try:
+        # Use waitress (production WSGI server) - single-threaded by default
+        # This prevents concurrent access to the Anki database
+        serve(app, host=host, port=port, threads=1)
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
+    except Exception as e:
+        logger.error(f"Server error: {e}", exc_info=True)
+    finally:
+        # Clean up the bridge
+        bridge.close()
 
 if __name__ == "__main__":
     run_server()

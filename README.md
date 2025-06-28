@@ -15,8 +15,8 @@ The server passes all requests to the original AnkiConnect plugin using minimal 
 ## Quick Start
 
 ```bash
-pip install -r requirements.txt
-python run.py
+poetry install
+python -m app.main
 ```
 
 The server runs on `http://localhost:8765` by default, just like regular AnkiConnect.
@@ -29,4 +29,6 @@ The server runs on `http://localhost:8765` by default, just like regular AnkiCon
 ⚠️ GUI methods return results but don't open windows
 ❌ Interactive permission dialogs (auto-deny for security)
 
-See `LIGHTWEIGHT_MODE.md` for detailed information about supported methods and architectural details.
+## Todo
+
+- Impl
