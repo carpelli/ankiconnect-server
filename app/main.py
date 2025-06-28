@@ -34,16 +34,9 @@ def handle_request():
             logger.warning("No JSON data received in request")
             return jsonify({"result": None, "error": "No JSON data received"}), 400
 
-        # Check API key if configured
-        if config['api_key']:
-            provided_key = data.get('key')
-            if provided_key != config['api_key']:
-                logger.warning(f"Invalid API key provided: {provided_key}")
-                return jsonify({"result": None, "error": "Invalid API key"}), 403
-
         # Process the request using the original AnkiConnect plugin
         logger.debug(f"Processing request: {data.get('action', 'unknown')}")
-        result = bridge.process_request(data)
+        result = bridge.handle_request(data)
         return jsonify(result)
 
     except Exception as e:

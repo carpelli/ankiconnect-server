@@ -31,4 +31,4 @@ The server runs on `http://localhost:8765` by default, just like regular AnkiCon
 
 ## Todo
 
-- Impl
+- Implement CORS in requests (at the moment all requests are accepted)

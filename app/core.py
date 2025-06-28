@@ -4,18 +4,26 @@ from typing_extensions import TYPE_CHECKING
 import sys
 
 import anki.lang
+import anki.collection # fix anki circular import
+anki.lang.set_lang('en_US') # TODO: Implement language selection
 
 from app.config import get_config
 
 # Import GUI stubs before importing anything that uses aqt
-from .gui_stubs import install_gui_stubs
+from app.anki_mocks import MockAnkiMainWindow, find_collection_path
+from app.gui_stubs import install_gui_stubs
 install_gui_stubs()
 
-from .anki_mocks import MockAnkiMainWindow, find_collection_path
+import aqt # type: ignore
+
+sys.path.append('libs/ankiconnect')
+if TYPE_CHECKING:
+    from libs.ankiconnect.plugin import AnkiConnect
+else:
+    from plugin import AnkiConnect # to avoid code execution on import
+sys.path.remove('libs/ankiconnect')
 
 logger = logging.getLogger(__name__)
-
-import aqt # type: ignore
 
 class AnkiConnectBridge:
     """
@@ -33,7 +41,6 @@ class AnkiConnectBridge:
             collection_path: Optional path to Anki collection. If not provided,
                            will use config or auto-detect default location.
         """
-        anki.lang.set_lang('en') # TODO: Implement language selection
 
         # Set up the mock Anki environment
         self.collection_path = collection_path or get_config()['collection_path'] or find_collection_path()
@@ -43,12 +50,6 @@ class AnkiConnectBridge:
 
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
-
-        sys.path.append('libs/ankiconnect')
-        if TYPE_CHECKING:
-            from libs.ankiconnect.plugin import AnkiConnect
-        else:
-            from plugin import AnkiConnect
         self.ankiconnect = AnkiConnect()
 
         # Initialize logging if needed
@@ -60,7 +61,7 @@ class AnkiConnectBridge:
 
         logger.info("AnkiConnect bridge initialized successfully")
 
-    def process_request(self, request_data: dict) -> dict:
+    def handle_request(self, request_data: dict) -> dict:
         """
         Process an AnkiConnect request using the original plugin.
         
@@ -70,16 +71,9 @@ class AnkiConnectBridge:
         Returns:
             Response data in AnkiConnect format
         """
-        try:
-            logger.debug(f"Processing request: {request_data.get('action', 'unknown')}")
-            # Use the original AnkiConnect handler
-            result = self.ankiconnect.handler(request_data)
-            logger.debug(f"Request processed successfully: {request_data.get('action', 'unknown')}")
-            return result
-        except Exception as e:
-            logger.error(f"Error processing request {request_data.get('action', 'unknown')}: {e}", exc_info=True)
-            # Return error in AnkiConnect format
-            return {"result": None, "error": str(e)}
+        if request_data.get('action') == 'requestPermission':
+            return self.ankiconnect.requestPermission(origin='', allowed=True)
+        return self.ankiconnect.handler(request_data)
 
     def close(self) -> None:
         """Clean up resources and close the Anki collection."""
@@ -89,11 +83,3 @@ class AnkiConnectBridge:
                 logger.info("Bridge resources cleaned up")
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
-
-    def __enter__(self):
-        """Context manager entry point."""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit point with automatic cleanup."""
-        self.close()
