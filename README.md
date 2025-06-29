@@ -27,8 +27,8 @@ The server runs on `http://localhost:8765` by default, just like regular AnkiCon
 ✅ Search and filtering
 ✅ Import/export (programmatic)
 ⚠️ GUI methods return results but don't open windows
-❌ Interactive permission dialogs (auto-deny for security)
+❌ Interactive permission dialogs
 
 ## Todo
 
-- Implement CORS in requests (at the moment all requests are accepted)
+- Implement CORS in requests (currently all requests are accepted)

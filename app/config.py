@@ -18,7 +18,7 @@ def get_config() -> Dict[str, Any]:
 
         # API settings
         'api_key': os.getenv('ANKICONNECT_API_KEY'),
-        'api_version': int(os.getenv('ANKICONNECT_API_VERSION', '6')),
+        'api_version': 6,
 
         # CORS settings
         'cors_origins': os.getenv('ANKICONNECT_CORS_ORIGINS', 'http://localhost').split(','),

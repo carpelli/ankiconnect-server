@@ -30,7 +30,7 @@ class AnkiConnectBridge:
     Bridge that wraps the existing AnkiConnect plugin.
     
     This class provides a minimal interface to the AnkiConnect plugin,
-    handling the setup of mock Anki environment and request processing.
+    handling the setup of mock Anki environment and request processing.f
     """
 
     def __init__(self, collection_path: Optional[str] = None):
