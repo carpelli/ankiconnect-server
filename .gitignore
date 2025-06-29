@@ -3,3 +3,4 @@ devbox.lock
 README2.md
 .env
 poetry.lock
+data

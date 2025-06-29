@@ -1,7 +1,7 @@
 import logging
-from typing import Optional
 from typing_extensions import TYPE_CHECKING
 import sys
+from pathlib import Path
 
 import anki.lang
 import anki.collection # fix anki circular import
@@ -28,26 +28,17 @@ logger = logging.getLogger(__name__)
 class AnkiConnectBridge:
     """
     Bridge that wraps the existing AnkiConnect plugin.
-    
+
     This class provides a minimal interface to the AnkiConnect plugin,
-    handling the setup of mock Anki environment and request processing.f
+    handling the setup of mock Anki environment and request processing.
     """
 
-    def __init__(self, collection_path: Optional[str] = None):
-        """
-        Initialize the AnkiConnect bridge.
-        
-        Args:
-            collection_path: Optional path to Anki collection. If not provided,
-                           will use config or auto-detect default location.
-        """
-
+    def __init__(self, collection_path: str | None = None):
         # Set up the mock Anki environment
         self.collection_path = collection_path or get_config()['collection_path'] or find_collection_path()
-        logger.info(f"Initializing bridge with collection: {self.collection_path}")
-        
-        self.mock_mw = MockAnkiMainWindow(self.collection_path)
+        logger.info(f"Initializing with collection: {Path(self.collection_path).absolute()}")
 
+        self.mock_mw = MockAnkiMainWindow(self.collection_path)
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
         self.ankiconnect = AnkiConnect()
@@ -61,13 +52,17 @@ class AnkiConnectBridge:
 
         logger.info("AnkiConnect bridge initialized successfully")
 
+    def login(self, name, password, endpoint: str | None):
+        """Login to AnkiWeb or sync server"""
+        aqt.mw.pm._sync_auth = self.mock_mw.col.sync_login(name, password, endpoint)
+
     def handle_request(self, request_data: dict) -> dict:
         """
         Process an AnkiConnect request using the original plugin.
-        
+
         Args:
             request_data: The request data from the client
-            
+
         Returns:
             Response data in AnkiConnect format
         """

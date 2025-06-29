@@ -5,11 +5,13 @@ Simple mocks for the Anki environment needed by AnkiConnect.
 
 import os
 import sys
+import anki
+import anki.sync
 from .config import get_ankiconnect_config
-
 
 class MockProfileManager:
     """Mock profile manager"""
+    _sync_auth: anki.sync.SyncAuth
 
     def __init__(self):
         self.name = "test_user"
@@ -18,8 +20,13 @@ class MockProfileManager:
         """Return list of available profiles"""
         return ["test_user"]
 
+    def sync_auth(self):
+        return self._sync_auth
+
+    def media_syncing_enabled(self):
+        return True # TODO
+
     def __getattr__(self, name):
-        # Return reasonable defaults for any attribute
         return None
 
 
@@ -72,12 +79,15 @@ class MockAnkiMainWindow:
         """Mock isVisible method"""
         return True
 
+    def onSync(self):
+        print("Successfully synced!")
+
     def close(self):
         if hasattr(self, 'col') and self.col:
             self.col.close()
 
 
-def find_collection_path():
+def find_collection_path() -> str:
     """Find the default Anki collection path"""
     # Check environment variable first
     env_path = os.getenv('ANKICONNECT_COLLECTION_PATH')

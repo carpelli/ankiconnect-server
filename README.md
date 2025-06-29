@@ -32,3 +32,7 @@ The server runs on `http://localhost:8765` by default, just like regular AnkiCon
 ## Todo
 
 - Implement CORS in requests (currently all requests are accepted)
+- Log errors
+- Non-existent databases are silently created?
+- Report media sync status
+- Investigate better way to store user credentials

@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from waitress import serve
@@ -45,7 +45,7 @@ def handle_request():
         error_response = {"result": None, "error": str(e)}
         return jsonify(error_response), 500
 
-def run_server(host: Optional[str] = None, port: Optional[int] = None, debug: Optional[bool] = None):
+def run_server(host: str | None = None, port: int | None = None, debug: bool | None = None):
     """Run the AnkiConnect bridge server"""
     global bridge
 
@@ -54,22 +54,18 @@ def run_server(host: Optional[str] = None, port: Optional[int] = None, debug: Op
     port = port or config['port']
     debug = debug if debug is not None else config['debug']
 
-    logger.info(f"Starting AnkiConnect Bridge on {host}:{port}")
-
-    # Initialize the bridge
-    bridge = AnkiConnectBridge()
-    logger.info(f"Collection path: {bridge.collection_path}")
-
     if config['api_key']:
         logger.info("🔐 API key authentication enabled")
     else:
         logger.warning("⚠️ No API key set (consider setting ANKICONNECT_API_KEY)")
 
-    logger.info("Using Flask with waitress (production-ready, single-threaded)")
+    logger.info(f"Starting AnkiConnect Bridge on {host}:{port}")
+
+    # Initialize the bridge
+    bridge = AnkiConnectBridge()
+    bridge.login(config['sync_username'], config['sync_password'], config['sync_endpoint'])
 
     try:
-        # Use waitress (production WSGI server) - single-threaded by default
-        # This prevents concurrent access to the Anki database
         serve(app, host=host, port=port, threads=1)
     except KeyboardInterrupt:
         logger.info("Server stopped by user")

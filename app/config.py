@@ -11,19 +11,19 @@ load_dotenv()
 def get_config() -> Dict[str, Any]:
     """Get configuration from environment variables with sensible defaults"""
     return {
-        # Server settings
         'host': os.getenv('ANKICONNECT_HOST', '127.0.0.1'),
         'port': int(os.getenv('ANKICONNECT_PORT', '8765')),
         'debug': os.getenv('ANKICONNECT_DEBUG', 'false').lower() in ('true', '1', 'yes'),
 
-        # API settings
         'api_key': os.getenv('ANKICONNECT_API_KEY'),
-        'api_version': 6,
+        'api_log_path': os.getenv('ANKICONNECT_API_LOG_PATH'),
 
-        # CORS settings
+        'sync_username': os.getenv('SYNC_USERNAME'),
+        'sync_password': os.getenv('SYNC_PASSWORD'),
+        'sync_endpoint': os.getenv('SYNC_ENDPOINT'),
+
         'cors_origins': os.getenv('ANKICONNECT_CORS_ORIGINS', 'http://localhost').split(','),
 
-        # Anki settings
         'collection_path': os.getenv('ANKICONNECT_COLLECTION_PATH'),
     }
 
@@ -33,9 +33,9 @@ def get_ankiconnect_config() -> Dict[str, Any]:
     config = get_config()
     return {
         'apiKey': config['api_key'],
-        'apiLogPath': None,
+        'apiLogPath': config['api_log_path'],
         'apiPollInterval': 25,
-        'apiVersion': config['api_version'],
+        'apiVersion': 6,
         'webBacklog': 5,
         'webBindAddress': config['host'],
         'webBindPort': config['port'],
