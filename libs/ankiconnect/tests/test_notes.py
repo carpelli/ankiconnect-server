@@ -36,16 +36,21 @@ class TestNoteAddition:
         ac.addNote(make_note(allow_duplicates=True))
 
     def test_addNotes(self, setup):
+        with pytest.raises(Exception, match="cannot create note because it is a duplicate"):
+            ac.addNotes(notes=[
+                make_note(front="foo"),
+                make_note(front="bar"),
+                make_note(front="foo"),
+            ])
+
         result = ac.addNotes(notes=[
             make_note(front="foo"),
             make_note(front="bar"),
-            make_note(front="foo"),
         ])
 
-        assert len(result) == 3
+        assert len(result) == 2
         assert isinstance(result[0], int)
         assert isinstance(result[1], int)
-        assert result[2] is None
 
     def test_bug164(self, setup):
         note = {
