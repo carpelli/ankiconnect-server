@@ -56,7 +56,7 @@ curl localhost:8765 -X POST -d '{"action": "fullSync", "version": 6, "params": {
 Replace `localhost:8765` with the address of your AnkiConnect server.
 
 ### requestPermission
-Currently, `requestPermission` always returns a positive response
+Currently `requestPermission` always returns a positive response
 
 ## Todo
 
