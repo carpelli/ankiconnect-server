@@ -18,9 +18,8 @@ def get_config() -> Dict[str, Any]:
         'api_key': os.getenv('ANKICONNECT_API_KEY'),
         'api_log_path': os.getenv('ANKICONNECT_API_LOG_PATH'),
 
-        'sync_username': os.getenv('SYNC_USERNAME'),
-        'sync_password': os.getenv('SYNC_PASSWORD'),
         'sync_endpoint': os.getenv('SYNC_ENDPOINT'),
+        'sync_key': os.getenv('SYNC_KEY'),
 
         'cors_origins': os.getenv('ANKICONNECT_CORS_ORIGINS', 'http://localhost').split(','),
 

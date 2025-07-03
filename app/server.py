@@ -3,6 +3,7 @@ import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from waitress import serve
+from werkzeug.datastructures import accept
 
 from app.core import AnkiConnectBridge
 from app.config import get_config
@@ -22,12 +23,12 @@ app = Flask(__name__)
 CORS(app, origins=config['cors_origins'])
 
 # Global bridge instance
-bridge: AnkiConnectBridge
+ankiconnect: AnkiConnectBridge
 
 @app.route("/", methods=["POST"])
 def handle_request():
     """Handle AnkiConnect API requests"""
-    global bridge
+    global ankiconnect
     try:
         data = request.get_json(force=True)
         if not data:
@@ -36,7 +37,7 @@ def handle_request():
 
         # Process the request using the original AnkiConnect plugin
         logger.debug(f"Processing request: {data.get('action', 'unknown')}")
-        result = bridge.handler(data)
+        result = ankiconnect.handler(data)
         return jsonify(result)
 
     except Exception as e:
@@ -47,7 +48,7 @@ def handle_request():
 
 def run_server(host: str | None = None, port: int | None = None, debug: bool | None = None):
     """Run the AnkiConnect bridge server"""
-    global bridge
+    global ankiconnect
 
     # Use config defaults if not specified
     host = host or config['host']
@@ -62,8 +63,7 @@ def run_server(host: str | None = None, port: int | None = None, debug: bool | N
     logger.info(f"Starting AnkiConnect Bridge on {host}:{port}")
 
     # Initialize the bridge
-    bridge = AnkiConnectBridge()
-    bridge.login(config['sync_username'], config['sync_password'], config['sync_endpoint'])
+    ankiconnect = AnkiConnectBridge()
 
     try:
         serve(app, host=host, port=port, threads=1)
@@ -73,7 +73,7 @@ def run_server(host: str | None = None, port: int | None = None, debug: bool | N
         logger.error(f"Server error: {e}", exc_info=True)
     finally:
         # Clean up the bridge
-        bridge.close()
+        ankiconnect.close()
 
 if __name__ == "__main__":
     run_server()

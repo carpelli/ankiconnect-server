@@ -54,10 +54,6 @@ class AnkiConnectBridge(AnkiConnect):
 
         logger.info("AnkiConnect bridge initialized successfully")
 
-    def login(self, name, password, endpoint: str | None):
-        """Login to AnkiWeb or sync server"""
-        self._sync_auth = self.mock_mw.col.sync_login(name, password, endpoint)
-
     def handler(self, request: dict) -> dict:
         """
         Process an AnkiConnect request using the original plugin.
@@ -72,9 +68,17 @@ class AnkiConnectBridge(AnkiConnect):
             return self.requestPermission(origin='', allowed=True)
         return super().handler(request)
 
+    def sync_auth(self) -> anki.sync.SyncAuth:
+        if (hkey := get_config()['sync_key']) is None:
+            raise Exception("sync: key not configured")
+        return anki.sync.SyncAuth(
+            hkey=hkey,
+            endpoint=get_config()['sync_endpoint'],
+            io_timeout_secs=10 # TODO configure?
+        )
+
     def _sync(self, mode: str | None = None):
-        if (auth := self._sync_auth) is None:
-            raise Exception("sync: auth not configured")
+        auth = self.sync_auth()
         col = self.collection()
         out = col.sync_collection(auth, True) # TODO media enabled option
         accepted_sync_statuses = [out.NO_CHANGES, out.NORMAL_SYNC]

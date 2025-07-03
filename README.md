@@ -14,9 +14,10 @@ The server passes all requests to the original AnkiConnect plugin using minimal 
 
 ## Quick Start
 
+After installing the dependencies:
+
 ```bash
-poetry install
-python -m app.main
+python -m app.server
 ```
 
 The server runs on `http://localhost:8765` by default, just like regular AnkiConnect.

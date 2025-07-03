@@ -5,8 +5,6 @@ Simple mocks for the Anki environment needed by AnkiConnect.
 
 import os
 import sys
-import anki
-import anki.sync
 from .config import get_ankiconnect_config
 
 class MockProfileManager:
