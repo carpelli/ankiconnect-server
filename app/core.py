@@ -45,12 +45,10 @@ class AnkiConnectBridge(AnkiConnect):
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
 
-        # Initialize logging if needed
-        try:
+        if get_config()['api_log_path']:
             self.initLogging()
-            logger.debug("AnkiConnect logging initialized")
-        except Exception as e:
-            logger.warning(f"Could not initialize AnkiConnect logging: {e}")
+        else:
+            self.log = None # Fix?
 
         logger.info("AnkiConnect bridge initialized successfully")
 
