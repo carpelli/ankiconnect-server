@@ -36,7 +36,7 @@ def handle_request():
 
         # Process the request using the original AnkiConnect plugin
         logger.debug(f"Processing request: {data.get('action', 'unknown')}")
-        result = bridge.handle_request(data)
+        result = bridge.handler(data)
         return jsonify(result)
 
     except Exception as e:

@@ -1,6 +1,7 @@
+.env
+data
+
 devbox.json
 devbox.lock
 README2.md
-.env
-poetry.lock
-data
+log.txt

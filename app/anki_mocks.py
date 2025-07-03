@@ -11,7 +11,6 @@ from .config import get_ankiconnect_config
 
 class MockProfileManager:
     """Mock profile manager"""
-    _sync_auth: anki.sync.SyncAuth
 
     def __init__(self):
         self.name = "test_user"
@@ -19,12 +18,6 @@ class MockProfileManager:
     def profiles(self):
         """Return list of available profiles"""
         return ["test_user"]
-
-    def sync_auth(self):
-        return self._sync_auth
-
-    def media_syncing_enabled(self):
-        return True # TODO
 
     def __getattr__(self, name):
         return None
@@ -78,9 +71,6 @@ class MockAnkiMainWindow:
     def isVisible(self):
         """Mock isVisible method"""
         return True
-
-    def onSync(self):
-        print("Successfully synced!")
 
     def close(self):
         if hasattr(self, 'col') and self.col:

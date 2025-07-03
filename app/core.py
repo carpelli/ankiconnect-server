@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import anki.lang
+import anki.sync
 import anki.collection # fix anki circular import
 anki.lang.set_lang('en_US') # TODO: Implement language selection
 
@@ -18,20 +19,22 @@ import aqt # type: ignore
 
 sys.path.append('libs/ankiconnect')
 if TYPE_CHECKING:
-    from libs.ankiconnect.plugin import AnkiConnect
+    from libs.ankiconnect.plugin import AnkiConnect, util
 else:
-    from plugin import AnkiConnect # to avoid code execution on import
+    from plugin import AnkiConnect, util # to avoid code execution on import
 sys.path.remove('libs/ankiconnect')
 
 logger = logging.getLogger(__name__)
 
-class AnkiConnectBridge:
+class AnkiConnectBridge(AnkiConnect):
     """
     Bridge that wraps the existing AnkiConnect plugin.
 
     This class provides a minimal interface to the AnkiConnect plugin,
     handling the setup of mock Anki environment and request processing.
     """
+
+    _sync_auth: anki.sync.SyncAuth | None
 
     def __init__(self, collection_path: str | None = None):
         # Set up the mock Anki environment
@@ -41,11 +44,10 @@ class AnkiConnectBridge:
         self.mock_mw = MockAnkiMainWindow(self.collection_path)
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
-        self.ankiconnect = AnkiConnect()
 
         # Initialize logging if needed
         try:
-            self.ankiconnect.initLogging()
+            self.initLogging()
             logger.debug("AnkiConnect logging initialized")
         except Exception as e:
             logger.warning(f"Could not initialize AnkiConnect logging: {e}")
@@ -54,9 +56,9 @@ class AnkiConnectBridge:
 
     def login(self, name, password, endpoint: str | None):
         """Login to AnkiWeb or sync server"""
-        aqt.mw.pm._sync_auth = self.mock_mw.col.sync_login(name, password, endpoint)
+        self._sync_auth = self.mock_mw.col.sync_login(name, password, endpoint)
 
-    def handle_request(self, request_data: dict) -> dict:
+    def handler(self, request: dict) -> dict:
         """
         Process an AnkiConnect request using the original plugin.
 
@@ -66,9 +68,33 @@ class AnkiConnectBridge:
         Returns:
             Response data in AnkiConnect format
         """
-        if request_data.get('action') == 'requestPermission':
-            return self.ankiconnect.requestPermission(origin='', allowed=True)
-        return self.ankiconnect.handler(request_data)
+        if request.get('action') == 'requestPermission':
+            return self.requestPermission(origin='', allowed=True)
+        return super().handler(request)
+
+    def _sync(self, mode: str | None = None):
+        if (auth := self._sync_auth) is None:
+            raise Exception("sync: auth not configured")
+        col = self.collection()
+        out = col.sync_collection(auth, True) # TODO media enabled option
+        accepted_sync_statuses = [out.NO_CHANGES, out.NORMAL_SYNC]
+        status_str = anki.sync.SyncOutput.ChangesRequired.Name(out.required)
+        if out.required not in accepted_sync_statuses:
+            if mode in ['download', 'upload']:
+                col.close_for_full_sync() # should reopen automatically
+                col.full_upload_or_download(auth=auth, server_usn=out.server_media_usn, upload=(mode=='upload')) # TODO media enabled option
+            else:
+                logger.info(f"Could not sync status {status_str}")
+                raise Exception(f"could not sync status {status_str} - use fullSync")
+        logger.info(f"Synced with status: {status_str}")
+
+    @util.api()
+    def sync(self):
+        self._sync()
+
+    @util.api()
+    def fullSync(self, mode: str):
+        self._sync(mode=mode)
 
     def close(self) -> None:
         """Clean up resources and close the Anki collection."""

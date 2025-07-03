@@ -3,7 +3,7 @@ name = "ankiconnect-server"
 version = "0.1.0"
 description = "Lightweight AnkiConnect Server"
 authors = [{ name = "User", email = "user@example.com" }]
-requires-python = "~=3.9"
+requires-python = ">=3.10"
 readme = "README.md"
 dependencies = [
     "anki>=25.2.6,<26",
@@ -16,9 +16,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "pytest>=7.4.0,<8",
-]
+dev = ["pytest>=7.4.0,<8"]
 
 [tool.uv]
 package = false
