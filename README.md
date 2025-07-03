@@ -12,7 +12,9 @@ The server passes all requests to the original AnkiConnect plugin using minimal 
 - **Graceful degradation**: GUI methods fall back to functional alternatives
 - **Container-friendly**: Perfect for Docker deployments
 
-## Quick Start
+## Usage
+
+### Quick Start
 
 After installing the dependencies:
 
@@ -20,7 +22,17 @@ After installing the dependencies:
 python -m app.server
 ```
 
-The server runs on `http://localhost:8765` by default, just like regular AnkiConnect.
+The server runs on `http://localhost:8765` by default.
+
+### Sync key
+
+In order to sync the collection with the sync server, you need to provide an authentication key. This key can be requested by running
+
+```bash
+python -m app.keygen
+```
+
+and following the instructions.
 
 ## What Works
 
@@ -32,8 +44,8 @@ The server runs on `http://localhost:8765` by default, just like regular AnkiCon
 
 ## API modifications
 
-### sync
-Since AnkiConnect only supports a partial sync, and there is no Anki client to fall back on and perform a full sync, the `sync` action is modified to support the parameter **mode**. This parameter must be set to `"upload"` or `"download"`. Caution is advised when using `"upload"`, as it might upload conflicting or corrupting changes caused by API calls. The parameter is only respected when a full sync is required, i.e. when the sync status is either of the following: `FULL_SYNC`, `FULL_DOWNLOAD` (empty local collection), or `FULL_UPLOAD` (empty remote collection).
+### fullSync
+Since AnkiConnect only supports a partial sync, and there is no Anki client to fall back on and perform a full sync, a `fullSync` action is provided, with the parameter **mode**. This parameter must be set to `"upload"` or `"download"`. Caution is advised when using `"upload"`, as it might upload conflicting or corrupting changes caused by API calls. The parameter is only respected when a full sync is required, i.e. when the sync status is either of the following: `FULL_SYNC`, `FULL_DOWNLOAD` (empty local collection), or `FULL_UPLOAD` (empty remote collection).
 
 Example request (use to download the collection from the sync server):
 
