@@ -71,3 +71,4 @@ Currently `requestPermission` always returns a positive response
 - Test sync? (probably not worth the effort)
 - Decide on how to copy init data to avoid strain on AnkiWeb
 - Automate download sync on new collection creation
+- Use anki collection dir instead of file

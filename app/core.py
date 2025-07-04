@@ -1,22 +1,14 @@
 import logging
 from pathlib import Path
 
-import anki.lang
 import anki.sync
-import anki.collection  # fix anki circular import
 
-anki.lang.set_lang("en_US")  # TODO: Implement language selection
-
-from app.config import get_config
-
-# Import GUI stubs before importing anything that uses aqt
 from app.anki_mocks import MockAnkiMainWindow
-from app.gui_stubs import install_gui_stubs
-
-install_gui_stubs()
-
-import aqt  # type: ignore
+from app.config import get_config
 from app.plugin import AnkiConnect, util
+
+# must be imported after app.plugin, which installs aqt stubs
+import aqt  # type: ignore # isort: skip
 
 logger = logging.getLogger(__name__)
 
