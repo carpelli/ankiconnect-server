@@ -1,30 +1,25 @@
 import logging
-from typing_extensions import TYPE_CHECKING
-import sys
 from pathlib import Path
 
 import anki.lang
 import anki.sync
-import anki.collection # fix anki circular import
-anki.lang.set_lang('en_US') # TODO: Implement language selection
+import anki.collection  # fix anki circular import
+
+anki.lang.set_lang("en_US")  # TODO: Implement language selection
 
 from app.config import get_config
 
 # Import GUI stubs before importing anything that uses aqt
 from app.anki_mocks import MockAnkiMainWindow
 from app.gui_stubs import install_gui_stubs
+
 install_gui_stubs()
 
-import aqt # type: ignore
-
-sys.path.append('libs/ankiconnect')
-if TYPE_CHECKING:
-    from libs.ankiconnect.plugin import AnkiConnect, util
-else:
-    from plugin import AnkiConnect, util # to avoid code execution on import
-sys.path.remove('libs/ankiconnect')
+import aqt  # type: ignore
+from app.plugin import AnkiConnect, util
 
 logger = logging.getLogger(__name__)
+
 
 class AnkiConnectBridge(AnkiConnect):
     """
@@ -38,17 +33,19 @@ class AnkiConnectBridge(AnkiConnect):
 
     def __init__(self, collection_path: str | None = None):
         # Set up the mock Anki environment
-        self.collection_path = collection_path or get_config()['collection_path']
-        logger.info(f"Initializing with collection: {Path(self.collection_path).absolute()}")
+        self.collection_path = collection_path or get_config()["collection_path"]
+        logger.info(
+            f"Initializing with collection: {Path(self.collection_path).absolute()}"
+        )
 
         self.mock_mw = MockAnkiMainWindow(self.collection_path)
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
 
-        if get_config()['api_log_path']:
+        if get_config()["api_log_path"]:
             self.initLogging()
         else:
-            self.log = None # Fix?
+            self.log = None  # Fix?
 
         logger.info("AnkiConnect bridge initialized successfully")
 
@@ -62,29 +59,33 @@ class AnkiConnectBridge(AnkiConnect):
         Returns:
             Response data in AnkiConnect format
         """
-        if request.get('action') == 'requestPermission':
-            return self.requestPermission(origin='', allowed=True)
+        if request.get("action") == "requestPermission":
+            return self.requestPermission(origin="", allowed=True)
         return super().handler(request)
 
     def sync_auth(self) -> anki.sync.SyncAuth:
-        if (hkey := get_config()['sync_key']) is None:
+        if (hkey := get_config()["sync_key"]) is None:
             raise Exception("sync: key not configured")
         return anki.sync.SyncAuth(
             hkey=hkey,
-            endpoint=get_config()['sync_endpoint'],
-            io_timeout_secs=10 # TODO configure?
+            endpoint=get_config()["sync_endpoint"],
+            io_timeout_secs=10,  # TODO configure?
         )
 
     def _sync(self, mode: str | None = None):
         auth = self.sync_auth()
         col = self.collection()
-        out = col.sync_collection(auth, True) # TODO media enabled option
+        out = col.sync_collection(auth, True)  # TODO media enabled option
         accepted_sync_statuses = [out.NO_CHANGES, out.NORMAL_SYNC]
         status_str = anki.sync.SyncOutput.ChangesRequired.Name(out.required)
         if out.required not in accepted_sync_statuses:
-            if mode in ['download', 'upload']:
-                col.close_for_full_sync() # should reopen automatically
-                col.full_upload_or_download(auth=auth, server_usn=out.server_media_usn, upload=(mode=='upload')) # TODO media enabled option
+            if mode in ["download", "upload"]:
+                col.close_for_full_sync()  # should reopen automatically
+                col.full_upload_or_download(
+                    auth=auth,
+                    server_usn=out.server_media_usn,
+                    upload=(mode == "upload"),
+                )  # TODO media enabled option
             else:
                 logger.info(f"Could not sync status {status_str}")
                 raise Exception(f"could not sync status {status_str} - use fullSync")
@@ -101,7 +102,7 @@ class AnkiConnectBridge(AnkiConnect):
     def close(self) -> None:
         """Clean up resources and close the Anki collection."""
         try:
-            if hasattr(self, 'mock_mw'):
+            if hasattr(self, "mock_mw"):
                 self.mock_mw.close()
                 logger.info("Bridge resources cleaned up")
         except Exception as e:
