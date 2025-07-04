@@ -1,45 +1,38 @@
-"""
-Simple configuration using environment variables.
-"""
-
 import os
-from typing import Dict, Any
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_config() -> Dict[str, Any]:
-    """Get configuration from environment variables with sensible defaults"""
-    return {
-        'host': os.getenv('ANKICONNECT_HOST', '127.0.0.1'),
-        'port': int(os.getenv('ANKICONNECT_PORT', '8765')),
-        'debug': os.getenv('ANKICONNECT_DEBUG', 'false').lower() in ('true', '1', 'yes'),
+HOST = os.getenv("ANKICONNECT_HOST", "127.0.0.1")
+PORT = int(os.getenv("ANKICONNECT_PORT", "8765"))
+DEBUG = os.getenv("ANKICONNECT_DEBUG", "false").lower() in ("true", "1", "yes")
 
-        'api_key': os.getenv('ANKICONNECT_API_KEY'),
-        'api_log_path': os.getenv('ANKICONNECT_API_LOG_PATH'),
+API_KEY = os.getenv("ANKICONNECT_API_KEY")
+ANKICONNECT_LOG_PATH = os.getenv("ANKICONNECT_API_LOG_PATH")
 
-        'sync_endpoint': os.getenv('SYNC_ENDPOINT'),
-        'sync_key': os.getenv('SYNC_KEY'),
+SYNC_ENDPOINT = os.getenv("SYNC_ENDPOINT")
+SYNC_KEY = os.getenv("SYNC_KEY")
 
-        'cors_origins': os.getenv('ANKICONNECT_CORS_ORIGINS', 'http://localhost').split(','),
+CORS_ORIGINS = os.getenv("ANKICONNECT_CORS_ORIGINS", "http://localhost").split(",")
 
-        'collection_path': os.getenv('ANKICONNECT_COLLECTION_PATH'),
-    }
+_base_dir_str = os.getenv("ANKI_BASE_DIR")
+ANKI_BASE_DIR = Path(_base_dir_str) if _base_dir_str is not None else None
 
 
-def get_ankiconnect_config() -> Dict[str, Any]:
+def get_ankiconnect_config():
     """Get configuration in AnkiConnect plugin format"""
-    config = get_config()
     return {
-        'apiKey': config['api_key'],
-        'apiLogPath': config['api_log_path'],
-        'apiPollInterval': 25,
-        'apiVersion': 6,
-        'webBacklog': 5,
-        'webBindAddress': config['host'],
-        'webBindPort': config['port'],
-        'webCorsOrigin': None,
-        'webCorsOriginList': config['cors_origins'],
-        'ignoreOriginList': [],
-        'webTimeout': 10000,
+        "apiKey": API_KEY,
+        "apiLogPath": ANKICONNECT_LOG_PATH,
+        "apiPollInterval": 25,
+        "apiVersion": 6,
+        "webBacklog": 5,
+        "webBindAddress": HOST,
+        "webBindPort": PORT,
+        "webCorsOrigin": None,
+        "webCorsOriginList": CORS_ORIGINS,
+        "ignoreOriginList": [],
+        "webTimeout": 10000,
     }

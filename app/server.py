@@ -1,3 +1,4 @@
+import argparse
 import logging
 from threading import Lock, Timer
 
@@ -7,12 +8,19 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from waitress import serve
 
-from app.config import get_ankiconnect_config, get_config
+from app.config import (
+    ANKI_BASE_DIR,
+    API_KEY,
+    CORS_ORIGINS,
+    HOST,
+    PORT,
+    get_ankiconnect_config,
+)
 from app.core import AnkiConnectBridge
 from app.plugin import web
 
 SYNC_AFTER_MOD_DELAY = 2
-SYNC_PERIODIC_DELAY = 1 * 60
+SYNC_PERIODIC_DELAY = 30 * 60
 
 # Configure logging
 logging.basicConfig(
@@ -20,12 +28,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Get config
-config = get_config()
-
 # Flask application
 app = Flask(__name__)
-CORS(app, origins=config["cors_origins"])
+CORS(app, origins=CORS_ORIGINS)
 
 ankiconnect: AnkiConnectBridge
 
@@ -128,29 +133,15 @@ def restart_periodic_sync():
     sync_periodic_timer.start()
 
 
-def run_server(
-    host: str | None = None, port: int | None = None, debug: bool | None = None
-):
-    """Run the AnkiConnect bridge server"""
+def run_server():
     global ankiconnect
 
-    # Use config defaults if not specified
-    host = host or config["host"]
-    port = port or config["port"]
-    debug = debug if debug is not None else config["debug"]
-
-    if config["api_key"]:
-        logger.info("🔐 API key authentication enabled")
-    else:
-        logger.warning("⚠️ No API key set (consider setting ANKICONNECT_API_KEY)")
-
-    # Initialize the bridge
     ankiconnect = AnkiConnectBridge()
     logger.info(f"Sync endpoint: {ankiconnect.sync_auth().endpoint or 'AnkiWeb'}")
 
     try:
         restart_periodic_sync()
-        serve(app, host=host, port=port, threads=1)
+        serve(app, host=HOST, port=PORT, threads=1)
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:
@@ -164,5 +155,32 @@ def run_server(
         ankiconnect.close()
 
 
+parser = argparse.ArgumentParser(description="AnkiConnect server")
+parser.add_argument(
+    "--create",
+    nargs="?",
+    const=True,
+    default=False,
+    help="Create a new collection if not present",
+)
+
+
 if __name__ == "__main__":
+    args = parser.parse_args()
+    if ANKI_BASE_DIR is None:
+        logger.error("Collection directory not set")
+        exit(1)
+    if not ANKI_BASE_DIR.is_dir():
+        logger.error(f"Collection directory not a directory: {ANKI_BASE_DIR}")
+        exit(1)
+    collection_path = ANKI_BASE_DIR / "test_collection.anki21"
+    if not collection_path.exists() and not args.create:
+        logger.error(
+            f"Collection not found at {collection_path}, use --create to create a new collection"
+        )
+        exit(1)
+    if API_KEY:
+        logger.info("API key authentication enabled")
+    else:
+        logger.warning("No API key set (consider setting ANKICONNECT_API_KEY)")
     run_server()

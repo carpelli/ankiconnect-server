@@ -61,6 +61,7 @@ Currently `requestPermission` always returns a positive response
 ## Todo
 
 - Implement CORS in requests (currently all requests are accepted)
+- Check collection from time to time
 - Log errors
 - Nicer log output
 - Flag to create database

@@ -4,7 +4,7 @@ from pathlib import Path
 import anki.sync
 
 from app.anki_mocks import MockAnkiMainWindow
-from app.config import get_config
+from app.config import ANKI_BASE_DIR, ANKICONNECT_LOG_PATH, SYNC_ENDPOINT, SYNC_KEY
 from app.plugin import AnkiConnect, util
 
 # must be imported after app.plugin, which installs aqt stubs
@@ -23,18 +23,20 @@ class AnkiConnectBridge(AnkiConnect):
 
     _sync_auth: anki.sync.SyncAuth | None
 
-    def __init__(self, collection_path: str | None = None):
+    def __init__(self, base_dir: Path | None = None):
         # Set up the mock Anki environment
-        self.collection_path = collection_path or get_config()["collection_path"]
-        logger.info(
-            f"Initializing with collection: {Path(self.collection_path).absolute()}"
-        )
+
+        base_dir = base_dir or ANKI_BASE_DIR
+        assert base_dir is not None
+
+        self.collection_path = str(base_dir / "collection.anki2")
+        logger.info(f"Initializing with collection: {self.collection_path}")
 
         self.mock_mw = MockAnkiMainWindow(self.collection_path)
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
 
-        if get_config()["api_log_path"]:
+        if ANKICONNECT_LOG_PATH:
             self.initLogging()
         else:
             self.log = None  # Fix?
@@ -56,11 +58,11 @@ class AnkiConnectBridge(AnkiConnect):
         return super().handler(request)
 
     def sync_auth(self) -> anki.sync.SyncAuth:
-        if (hkey := get_config()["sync_key"]) is None:
+        if (hkey := SYNC_KEY) is None:
             raise Exception("sync: key not configured")
         return anki.sync.SyncAuth(
             hkey=hkey,
-            endpoint=get_config()["sync_endpoint"],
+            endpoint=SYNC_ENDPOINT,
             io_timeout_secs=10,  # TODO configure?
         )
 
@@ -91,7 +93,7 @@ class AnkiConnectBridge(AnkiConnect):
     def fullSync(self, mode: str):
         self._sync(mode=mode)
 
-    def close(self) -> None:
+    def close(self):
         """Clean up resources and close the Anki collection."""
         try:
             if hasattr(self, "mock_mw"):
