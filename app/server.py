@@ -82,6 +82,7 @@ def handle_request():
     logger.info(
         f"Request from {client_ip} | origin={origin} | action={action} | user_agent={user_agent}"
     )
+    logger.debug(f"Request body: {data}")
 
     # Handle request through AnkiConnectBridge
     try:
@@ -89,6 +90,7 @@ def handle_request():
             before_mod = ankiconnect.collection().mod
             result = ankiconnect.handler(data)
             collection_changed = before_mod != ankiconnect.collection().mod
+        logger.debug(f"Reply body: {result}")
         if action in ["sync", "fullSync"]:
             # disable/restart sync timers if we already synced
             if sync_after_mod_timer is not None:
