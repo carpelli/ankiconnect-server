@@ -23,10 +23,7 @@ class AnkiConnectBridge(AnkiConnect):
 
     _sync_auth: anki.sync.SyncAuth | None
 
-    def __init__(self, base_dir: Path | None = None):
-        base_dir = base_dir or ANKI_BASE_DIR
-        assert base_dir is not None
-
+    def __init__(self, base_dir: Path):
         self.collection_path = str(base_dir.absolute() / "collection.anki2")
         logger.info(f"Initializing with collection: {self.collection_path}")
 

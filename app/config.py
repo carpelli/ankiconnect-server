@@ -16,8 +16,7 @@ SYNC_KEY = os.getenv("SYNC_KEY")
 
 CORS_ORIGINS = os.getenv("ANKICONNECT_CORS_ORIGINS", "http://localhost").split(",")
 
-_base_dir_str = os.getenv("ANKI_BASE_DIR")
-ANKI_BASE_DIR = Path(_base_dir_str) if _base_dir_str is not None else None
+ANKI_BASE_DIR = os.getenv("ANKI_BASE_DIR")
 
 
 def get_ankiconnect_config():

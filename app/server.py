@@ -1,5 +1,7 @@
 import argparse
+import json
 import logging
+from pathlib import Path
 from threading import Lock, Timer
 
 import jsonschema
@@ -65,11 +67,11 @@ def handle_request():
 
     # Parse and validate JSON body
     try:
-        data = request.get_json(force=True)
+        data = json.loads(request.get_data().decode("utf-8"))
         jsonschema.validate(data, web.request_schema)
     except (ValueError, jsonschema.ValidationError) as e:
         if len(request.get_data()) == 0:
-            return {"version": API_VERSION}, 200
+            return {"apiVersion": f"AnkiConnect v.{API_VERSION}"}, 200
         else:
             logger.info("JSON parse/validation failed")
             return {"result": None, "error": str(e)}, 400
@@ -99,7 +101,7 @@ def handle_request():
         elif collection_changed:
             logger.debug("Collection modified – scheduling auto-sync")
             schedule_sync_after_mod()
-        return jsonify(result)
+        return {"result": result, "error": None}, 200
     except Exception as e:
         logger.error(f"Error processing request: {e}", exc_info=True)
         return {"result": None, "error": str(e)}, 500
@@ -135,10 +137,10 @@ def restart_periodic_sync():
     sync_periodic_timer.start()
 
 
-def run_server():
+def run_server(base_dir: Path):
     global ankiconnect
 
-    ankiconnect = AnkiConnectBridge()
+    ankiconnect = AnkiConnectBridge(base_dir)
     logger.info(f"Sync endpoint: {ankiconnect.sync_auth().endpoint or 'AnkiWeb'}")
 
     try:
@@ -158,26 +160,22 @@ def run_server():
 
 
 parser = argparse.ArgumentParser(description="AnkiConnect server")
+parser.add_argument("--base", "-b", type=Path, help="base directory for the collection")
 parser.add_argument(
-    "--create",
-    nargs="?",
-    const=True,
-    default=False,
-    help="Create a new collection if not present",
+    "--create", action="store_true", help="create a new collection if not present"
 )
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    if ANKI_BASE_DIR is None:
-        logger.error("Collection directory not set")
+    if (base_dir := args.base or ANKI_BASE_DIR) is None:
+        logger.error("Collection directory not set, use -b or ANKI_BASE_DIR")
         exit(1)
-    if not ANKI_BASE_DIR.is_dir():
-        logger.error(
-            f"Collection directory not a directory: {ANKI_BASE_DIR.absolute()}"
-        )
+    base_dir = Path(base_dir)
+    if not base_dir.is_dir():
+        logger.error(f"Collection directory not a directory: {base_dir.absolute()}")
         exit(1)
-    collection_path = ANKI_BASE_DIR / "collection.anki2"
+    collection_path = base_dir / "collection.anki2"
     if not collection_path.exists() and not args.create:
         logger.error(
             f"Collection not found at {collection_path}, use --create to create a new collection"
@@ -187,4 +185,4 @@ if __name__ == "__main__":
         logger.info("API key authentication enabled")
     else:
         logger.warning("No API key set (consider setting ANKICONNECT_API_KEY)")
-    run_server()
+    run_server(base_dir)
