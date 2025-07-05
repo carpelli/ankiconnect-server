@@ -87,6 +87,18 @@ class AnkiConnectBridge(AnkiConnect):
     def fullSync(self, mode: str):
         self._sync(mode=mode)
 
+    @util.api()
+    def checkDatabase(self):
+        problems, ok = self.collection().fix_integrity()
+        if ok:
+            logger.info("Database integrity check passed")
+        else:
+            logger.error("Database integrity check failed")
+        for problem in problems.split("\n"):
+            if problem.strip():
+                (logger.info if ok else logger.error)(problem)
+        return {"problems": problems, "ok": ok}
+
     def close(self):
         """Clean up resources and close the Anki collection."""
         try:
