@@ -43,7 +43,7 @@ API_VERSION = get_ankiconnect_config()["apiVersion"]
 
 
 # -----------------------------------------------------------------------------
-# HTTP routes to mirror /libs/ankiconnect/plugin/web.py
+# HTTP routes to mirror libs/ankiconnect/plugin/web.py
 # -----------------------------------------------------------------------------
 
 
@@ -171,9 +171,11 @@ if __name__ == "__main__":
         logger.error("Collection directory not set")
         exit(1)
     if not ANKI_BASE_DIR.is_dir():
-        logger.error(f"Collection directory not a directory: {ANKI_BASE_DIR}")
+        logger.error(
+            f"Collection directory not a directory: {ANKI_BASE_DIR.absolute()}"
+        )
         exit(1)
-    collection_path = ANKI_BASE_DIR / "test_collection.anki21"
+    collection_path = ANKI_BASE_DIR / "collection.anki2"
     if not collection_path.exists() and not args.create:
         logger.error(
             f"Collection not found at {collection_path}, use --create to create a new collection"

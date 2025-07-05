@@ -10,7 +10,6 @@ PORT = int(os.getenv("ANKICONNECT_PORT", "8765"))
 DEBUG = os.getenv("ANKICONNECT_DEBUG", "false").lower() in ("true", "1", "yes")
 
 API_KEY = os.getenv("ANKICONNECT_API_KEY")
-ANKICONNECT_LOG_PATH = os.getenv("ANKICONNECT_API_LOG_PATH")
 
 SYNC_ENDPOINT = os.getenv("SYNC_ENDPOINT")
 SYNC_KEY = os.getenv("SYNC_KEY")
@@ -25,7 +24,7 @@ def get_ankiconnect_config():
     """Get configuration in AnkiConnect plugin format"""
     return {
         "apiKey": API_KEY,
-        "apiLogPath": ANKICONNECT_LOG_PATH,
+        "apiLogPath": None,
         "apiPollInterval": 25,
         "apiVersion": 6,
         "webBacklog": 5,

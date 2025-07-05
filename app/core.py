@@ -4,7 +4,7 @@ from pathlib import Path
 import anki.sync
 
 from app.anki_mocks import MockAnkiMainWindow
-from app.config import ANKI_BASE_DIR, ANKICONNECT_LOG_PATH, SYNC_ENDPOINT, SYNC_KEY
+from app.config import ANKI_BASE_DIR, SYNC_ENDPOINT, SYNC_KEY
 from app.plugin import AnkiConnect, util
 
 # must be imported after app.plugin, which installs aqt stubs
@@ -24,22 +24,16 @@ class AnkiConnectBridge(AnkiConnect):
     _sync_auth: anki.sync.SyncAuth | None
 
     def __init__(self, base_dir: Path | None = None):
-        # Set up the mock Anki environment
-
         base_dir = base_dir or ANKI_BASE_DIR
         assert base_dir is not None
 
-        self.collection_path = str(base_dir / "collection.anki2")
+        self.collection_path = str(base_dir.absolute() / "collection.anki2")
         logger.info(f"Initializing with collection: {self.collection_path}")
 
         self.mock_mw = MockAnkiMainWindow(self.collection_path)
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
-
-        if ANKICONNECT_LOG_PATH:
-            self.initLogging()
-        else:
-            self.log = None  # Fix?
+        self.log = None
 
         logger.info("AnkiConnect bridge initialized successfully")
 
