@@ -1,0 +1,9 @@
+*
+!app/
+!libs/
+!pyproject.toml
+!uv.lock
+!Dockerfile
+
+__pycache__
+.DS_Store
