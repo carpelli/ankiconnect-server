@@ -65,12 +65,13 @@ class AnkiConnectBridge(AnkiConnect):
         status_str = anki.sync.SyncOutput.ChangesRequired.Name(out.required)
         if out.required not in accepted_sync_statuses:
             if mode in ["download", "upload"]:
-                col.close_for_full_sync()  # should reopen automatically
+                col.close_for_full_sync()
                 col.full_upload_or_download(
                     auth=auth,
                     server_usn=out.server_media_usn,
                     upload=(mode == "upload"),
                 )  # TODO media enabled option
+                col.reopen()
             else:
                 logger.info(f"Could not sync status {status_str}")
                 raise Exception(f"could not sync status {status_str} - use fullSync")
