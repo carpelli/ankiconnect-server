@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -7,16 +6,15 @@ load_dotenv()
 
 HOST = os.getenv("ANKICONNECT_HOST", "127.0.0.1")
 PORT = int(os.getenv("ANKICONNECT_PORT", "8765"))
-DEBUG = os.getenv("ANKICONNECT_DEBUG", "false").lower() in ("true", "1", "yes")
-
 API_KEY = os.getenv("ANKICONNECT_API_KEY")
+CORS_ORIGINS = os.getenv("ANKICONNECT_CORS_ORIGINS", "http://localhost").split(",")
 
 SYNC_ENDPOINT = os.getenv("SYNC_ENDPOINT")
 SYNC_KEY = os.getenv("SYNC_KEY")
 
-CORS_ORIGINS = os.getenv("ANKICONNECT_CORS_ORIGINS", "http://localhost").split(",")
-
 ANKI_BASE_DIR = os.getenv("ANKI_BASE_DIR")
+
+LOGLEVEL = os.getenv("ANKICONNECT_LOGLEVEL", "INFO")
 
 
 def get_ankiconnect_config():

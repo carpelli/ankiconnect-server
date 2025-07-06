@@ -1,20 +1,23 @@
 # AnkiConnect Server
 
-A lightweight wrapper for the AnkiConnect plugin that runs without requiring Anki desktop or the full PyQt GUI stack.
+A lightweight server wrapper for the AnkiConnect plugin that runs without requiring Anki desktop or the full PyQt GUI stack.
 
-The server passes all requests to the original AnkiConnect plugin using minimal GUI stubs. Apps depending on the API work as-is, and changes are easily incorporated. GUI requests are not supported, but should return normal or fallback results.
+The server passes all requests to the original AnkiConnect plugin using minimal GUI stubs. AnkiConnect clients should work as-is, and updates to the original plugin are easily incorporated. GUI requests are not tested, but should return appropriate fallback responses.
 
-## Features
+- **Small and fast**: Without any GUI, the application has a small footprint, starts up quickly, and uses comparitively few resources
+- **API compatibility**: Drop-in replacement for existing AnkiConnect clients. All deck, note, card, import/export, and search and filter operations work as expected.
+- **Easy deployment**: Just run the container
 
-- **Massive size reduction**: ~50MB instead of ~650MB (92% smaller)
-- **Faster startup**: No GUI initialization overhead
-- **Same API**: Drop-in replacement for existing AnkiConnect clients
-- **Graceful degradation**: GUI methods fall back to functional alternatives
-- **Container-friendly**: Perfect for Docker deployments
+[!NOTE]
+This is not an Anki sync server, but a client that functions as a server for the AnkiConnect API. To sync your data with other Anki clients, you'll need to connect with a server (instructions below).
+
+### Why this exists
+
+I wanted to use the KOReader Anki plugin and immediately see the new cards on my phone without opening my computer first. I experimented with a headless Anki container, but decided that this option was more dependable and easier on my server.
 
 ## Usage
 
-### Quick Start
+### Quick start
 
 After installing the dependencies:
 
@@ -22,44 +25,38 @@ After installing the dependencies:
 python -m app.server
 ```
 
-The server runs on `http://localhost:8765` by default.
+The server runs on `http://localhost:8765` by default, and can be configured using the environment variables in `.env.example`. If you start the server with an empty collection, you'll need to use the `fullSync` action detailed below in order to load your data.
 
-### Sync key
+#### Docker
 
-In order to sync the collection with the sync server, you need to provide an authentication key. This key can be requested by running
+For easy deployment, use the Dockerfile. Note that you still need to obtain a sync key.
+
+### Sync authentication
+
+In order to sync the collection with the sync server, you'll need to provide an authentication key. This key can be requested by running
 
 ```bash
 python -m app.keygen
 ```
 
-and following the instructions.
+Follow the prompts to obtain your key.
 
-## What Works
-
-✅ All core AnkiConnect functionality (deck/note/card operations)
-✅ Search and filtering
-✅ Import/export (programmatic)
-⚠️ GUI methods return results but don't open windows
-❌ Interactive permission dialogs
-
-## API modifications
+## API Extensions
 
 #### fullSync
-Since AnkiConnect only supports a partial sync, and there is no Anki client to fall back on and perform a full sync, a `fullSync` action is provided, with the parameter **mode**. This parameter must be set to `"upload"` or `"download"`. Caution is advised when using `"upload"`, as it might upload conflicting or corrupting changes caused by API calls. The parameter is only respected when a full sync is required, i.e. when the sync status is either of the following: `FULL_SYNC`, `FULL_DOWNLOAD` (empty local collection), or `FULL_UPLOAD` (empty remote collection).
+Since AnkiConnect only supports partial syncs and there's no Anki client to handle full syncs, a `fullSync` action is provided with a **mode** parameter. Set this to `"upload"` or `"download"`. Use `"upload"` with caution as it may upload conflicting changes from API operations. This action only performs a full sync if it is required (sync status: `FULL_SYNC`, `FULL_DOWNLOAD`, or `FULL_UPLOAD`).
 
-Example request (use to download the collection from the sync server):
+Example request to download the collection from the sync server:
 
-```Bash
+```bash
 curl localhost:8765 -X POST -d '{"action": "fullSync", "version": 6, "params": {"mode": "download"}}'
 ```
 
-Replace `localhost:8765` with the address of your AnkiConnect server.
-
 #### checkDatabase
-Performs the function as the Anki client's "Check Database". The Bool `ok` denotes whether the operation was a success and `problems` all info returned by the operation.
+Performs the equivalent of Anki's "Check Database" function. Returns a boolean `ok` indicating success and `problems` containing any issues found.
 
 #### requestPermission
-Currently `requestPermission` always returns a positive response
+Currently returns a positive response for all permission requests.
 
 ## Todo
 
@@ -68,8 +65,7 @@ Currently `requestPermission` always returns a positive response
 - Log errors
 - Nicer log output
 - Flag to create database
-- Report media sync status
-- Investigate better way to store user credentials
+- Report media sync status?
 - Import ankiconnect/plugin as a package from local source(?)
 - Add server test code
 - Test sync? (probably not worth the effort)

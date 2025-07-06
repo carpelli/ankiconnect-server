@@ -16,17 +16,18 @@ from app.config import (
     API_KEY,
     CORS_ORIGINS,
     HOST,
+    LOGLEVEL,
     PORT,
     get_ankiconnect_config,
 )
 from app.core import AnkiConnectBridge
 
-SYNC_AFTER_MOD_DELAY = 2
-SYNC_PERIODIC_DELAY = 30 * 60
+SYNC_AFTER_MOD_DELAY_SECONDS = 2
+SYNC_PERIODIC_DELAY_SECONDS = 30 * 60
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=LOGLEVEL, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ def schedule_sync_after_mod():
     global sync_after_mod_timer
     if sync_after_mod_timer is not None:
         sync_after_mod_timer.cancel()
-    sync_timer = Timer(SYNC_AFTER_MOD_DELAY, sync)
+    sync_timer = Timer(SYNC_AFTER_MOD_DELAY_SECONDS, sync)
     sync_timer.start()
 
 
@@ -136,7 +137,7 @@ def restart_periodic_sync():
         sync()
         restart_periodic_sync()
 
-    sync_periodic_timer = Timer(SYNC_PERIODIC_DELAY, _periodic)
+    sync_periodic_timer = Timer(SYNC_PERIODIC_DELAY_SECONDS, _periodic)
     sync_periodic_timer.start()
 
 
