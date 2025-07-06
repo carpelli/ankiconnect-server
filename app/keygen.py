@@ -1,14 +1,14 @@
-import os
+import argparse
 import contextlib
 import io
-import argparse
+import os
 import tempfile
 from getpass import getpass
 from pathlib import Path
 
-from anki.errors import SyncError
 import dotenv
 from anki.collection import Collection
+from anki.errors import SyncError
 
 parser = argparse.ArgumentParser(
     description="generate an authorization token for an Anki sync server"

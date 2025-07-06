@@ -5,6 +5,7 @@ Simple mocks for the Anki environment needed by AnkiConnect.
 
 from .config import get_ankiconnect_config
 
+
 class MockProfileManager:
     """Mock profile manager"""
 
@@ -47,6 +48,7 @@ class MockAnkiMainWindow:
 
     def __init__(self, collection_path: str):
         from anki.collection import Collection
+
         self.col = Collection(collection_path)
         self.addonManager = MockAddonManager()
         self.pm = MockProfileManager()
@@ -65,5 +67,5 @@ class MockAnkiMainWindow:
         return True
 
     def close(self):
-        if hasattr(self, 'col') and self.col:
+        if hasattr(self, "col") and self.col:
             self.col.close()
