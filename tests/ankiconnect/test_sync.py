@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import Mock, patch
 
-import anki.sync
-from anki.errors import SyncError
+import anki.sync  # noqa
+from anki.errors import SyncError  # noqa
 
 from conftest import ac, session_with_profile_loaded, current_decks_and_models_etc_preserved
 
