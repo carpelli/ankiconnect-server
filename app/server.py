@@ -172,12 +172,12 @@ parser.add_argument(
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    if (base_dir := args.base or ANKI_BASE_DIR) is None:
+    if not (base_dir := args.base or ANKI_BASE_DIR):
         logger.error("Collection directory not set, use -b or ANKI_BASE_DIR")
         exit(1)
     base_dir = Path(base_dir)
     if not base_dir.is_dir():
-        logger.error(f"Collection directory not a directory: {base_dir.absolute()}")
+        logger.error(f"Collection directory not a directory: {base_dir.resolve()}")
         exit(1)
     collection_path = base_dir / "collection.anki2"
     if not collection_path.exists() and not args.create:
