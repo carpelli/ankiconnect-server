@@ -8,8 +8,8 @@ The server passes all requests to the original AnkiConnect plugin using minimal 
 - **API compatibility**: Drop-in replacement for existing AnkiConnect clients. All deck, note, card, import/export, and search and filter operations work as expected.
 - **Easy deployment**: Just run the container
 
-[!NOTE]
-This is not an Anki sync server, but a client that functions as a server for the AnkiConnect API. To sync your data with other Anki clients, you'll need to connect with a server (instructions below).
+> [!NOTE]
+> This is not an Anki sync server, but a client that functions as a server for the AnkiConnect API. To sync your data with other Anki clients, you'll need to connect with a server (instructions below).
 
 ### Why this exists
 
