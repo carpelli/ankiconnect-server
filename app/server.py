@@ -10,6 +10,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from waitress import serve
 
+from app import plugin
 from app.config import (
     ANKI_BASE_DIR,
     API_KEY,
@@ -19,7 +20,6 @@ from app.config import (
     get_ankiconnect_config,
 )
 from app.core import AnkiConnectBridge
-from app.plugin import web
 
 SYNC_AFTER_MOD_DELAY = 2
 SYNC_PERIODIC_DELAY = 30 * 60
@@ -68,13 +68,13 @@ def handle_request():
     # Parse and validate JSON body
     try:
         data = json.loads(request.get_data().decode("utf-8"))
-        jsonschema.validate(data, web.request_schema)
+        jsonschema.validate(data, plugin.web.request_schema)
     except (ValueError, jsonschema.ValidationError) as e:
         if len(request.get_data()) == 0:
             return {"apiVersion": f"AnkiConnect v.{API_VERSION}"}, 200
         else:
             logger.info("JSON parse/validation failed")
-            return {"result": None, "error": str(e)}, 400
+            return plugin.web.format_exception_reply(API_VERSION, e), 400
 
     # Log
     client_ip = request.remote_addr or "unknown"
@@ -101,10 +101,13 @@ def handle_request():
         elif collection_changed:
             logger.debug("Collection modified – scheduling auto-sync")
             schedule_sync_after_mod()
-        return {"result": result, "error": None}, 200
+
+        # For API version <= 4: result is the raw value (string, number, list, etc.)
+        # For API version > 4: result is already an object with result/error fields
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error processing request: {e}", exc_info=True)
-        return {"result": None, "error": str(e)}, 500
+        return plugin.web.format_exception_reply(data.version, e), 500
 
 
 def sync():
