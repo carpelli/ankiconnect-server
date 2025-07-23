@@ -3,6 +3,8 @@ Anki-specific mock implementations.
 Simple mocks for the Anki environment needed by AnkiConnect.
 """
 
+from anki.collection import Collection
+
 from .config import get_ankiconnect_config
 
 
@@ -36,36 +38,30 @@ class MockProgress:
 class MockAddonManager:
     """Mock addon manager"""
 
-    def getConfig(self, name):
+    def getConfig(self, name):  # noqa: N802
         return get_ankiconnect_config()
 
-    def writeConfig(self, addon_name, config):
+    def writeConfig(self, addon_name, config):  # noqa: N802
         pass
 
 
 class MockAnkiMainWindow:
     """Mock Anki main window"""
 
-    def __init__(self, collection_path: str):
-        from anki.collection import Collection
-
-        self.col = Collection(collection_path)
+    def __init__(self, col: Collection):
+        self.col = col
         self.addonManager = MockAddonManager()
         self.pm = MockProfileManager()
         self.progress = MockProgress()
 
-    def requireReset(self, reason=None, context=None):
+    def requireReset(self, reason=None, context=None):  # noqa: N802
         pass
 
     def reset(self):
         pass
 
-    def unloadProfileAndShowProfileManager(self):
+    def unloadProfileAndShowProfileManager(self):  # noqa: N802
         pass
 
-    def isVisible(self):
+    def isVisible(self):  # noqa: N802
         return True
-
-    def close(self):
-        if hasattr(self, "col") and self.col:
-            self.col.close()

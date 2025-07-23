@@ -2,12 +2,12 @@ import logging
 import os
 from pathlib import Path
 
-import anki.collection
 import anki.sync
 import anki.utils
+from anki.collection import Collection
 
 from app.anki_mocks import MockAnkiMainWindow
-from app.config import SYNC_ENDPOINT, SYNC_KEY, get_ankiconnect_config
+from app.config import LOGLEVEL, SYNC_ENDPOINT, SYNC_KEY, get_ankiconnect_config
 from app.plugin import AnkiConnect, util, web
 
 # must be imported after app.plugin, which installs aqt stubs
@@ -31,9 +31,14 @@ class AnkiConnectBridge(AnkiConnect):
     def __init__(self, base_dir: Path):
         self.base_dir = base_dir
         self.collection_path = str(base_dir.absolute() / "collection.anki2")
-        logger.info(f"Initializing with collection: {self.collection_path}")
 
-        self.mock_mw = MockAnkiMainWindow(self.collection_path)
+        logger.info(f"Initializing with collection: {self.collection_path}")
+        self.col = Collection(self.collection_path)
+        if LOGLEVEL == "DEBUG":
+            os.environ["RUST_LOG"] = "debug"
+            self.col.initialize_backend_logging()
+
+        self.mock_mw = MockAnkiMainWindow(self.col)
         # Patch aqt.mw to point to our mock
         aqt.mw = self.mock_mw
         self.log = None
@@ -138,12 +143,7 @@ class AnkiConnectBridge(AnkiConnect):
 
     def close(self):
         """Clean up resources and close the Anki collection."""
-        try:
-            if hasattr(self, "mock_mw"):
-                self.mock_mw.close()
-                logger.info("Bridge resources cleaned up")
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
+        self.col.close()
 
-    def collection(self) -> anki.collection.Collection:
+    def collection(self) -> Collection:
         return super().collection()
