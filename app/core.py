@@ -57,12 +57,14 @@ class AnkiConnectBridge(AnkiConnect):
             )
         return super().handler(request)
 
+    _current_sync_url = None
+
     def sync_auth(self) -> anki.sync.SyncAuth:
         if (hkey := SYNC_KEY) is None:
             raise Exception("sync: key not configured")
         return anki.sync.SyncAuth(
             hkey=hkey,
-            endpoint=SYNC_ENDPOINT,
+            endpoint=self._current_sync_url or SYNC_ENDPOINT,
             io_timeout_secs=10,  # TODO configure?
         )
 
@@ -73,6 +75,7 @@ class AnkiConnectBridge(AnkiConnect):
         out = col.sync_collection(auth, True)  # TODO media enabled option
         if out.new_endpoint:
             logger.info(f"Sync - New endpoint requested: {out.new_endpoint}")
+            self._current_sync_url = out.new_endpoint
         if out.server_message:
             logger.info(f"Sync - Server message: {out.server_message}")
 
@@ -90,10 +93,7 @@ class AnkiConnectBridge(AnkiConnect):
                     )  # TODO media enabled option
                 finally:
                     logger.debug("Reopening collection")
-                    try:
-                        col.reopen()
-                    except Exception:  # FIXME
-                        pass
+                    col.reopen(after_full_sync=True)
             else:
                 logger.info(f"Could not sync status {status_str}")
                 raise Exception(f"could not sync status {status_str} - use fullSync")
@@ -123,9 +123,9 @@ class AnkiConnectBridge(AnkiConnect):
                 (logger.info if ok else logger.error)(problem)
         return {"problems": problems, "ok": ok}
 
-    last_mod = 0
+    _last_mod = 0
 
-    def is_modified(self):
+    def check_and_update_modified(self):
         """Check if the database has been modified since the last check."""
         try:
             new_mod = self.collection().mod
@@ -133,6 +133,7 @@ class AnkiConnectBridge(AnkiConnect):
             self.last_mod = new_mod
             return modified
         except AttributeError:
+            logger.debug("Checked col.mod but database is not open")
             return False  # Database not open for some reason (probably syncing) TODO?
 
     def close(self):

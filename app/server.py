@@ -30,6 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 # Flask application
 app = Flask(__name__)
 CORS(app, origins=CORS_ORIGINS)
@@ -90,7 +91,7 @@ def handle_request():
     try:
         with collection_lock:
             result = ankiconnect.handler(data)
-            collection_changed = ankiconnect.is_modified()
+            collection_changed = ankiconnect.check_and_update_modified()
         logger.debug(f"Reply body: {result}")
         if action in ["sync", "fullSync"]:
             # disable/restart sync timers if we already synced
