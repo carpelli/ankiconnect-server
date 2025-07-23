@@ -1,16 +1,23 @@
 import logging
+import os
 from pathlib import Path
 
+import anki.collection
 import anki.sync
+import anki.utils
 
 from app.anki_mocks import MockAnkiMainWindow
-from app.config import ANKI_BASE_DIR, SYNC_ENDPOINT, SYNC_KEY
-from app.plugin import AnkiConnect, util
+from app.config import SYNC_ENDPOINT, SYNC_KEY, get_ankiconnect_config
+from app.plugin import AnkiConnect, util, web
 
 # must be imported after app.plugin, which installs aqt stubs
 import aqt  # type: ignore # isort: skip
 
 logger = logging.getLogger(__name__)
+
+
+# Set platform environment variable for sync protocol (like aqt)
+os.environ["PLATFORM"] = anki.utils.plat_desc()
 
 
 class AnkiConnectBridge(AnkiConnect):
@@ -21,9 +28,8 @@ class AnkiConnectBridge(AnkiConnect):
     handling the setup of mock Anki environment and request processing.
     """
 
-    _sync_auth: anki.sync.SyncAuth | None
-
     def __init__(self, base_dir: Path):
+        self.base_dir = base_dir
         self.collection_path = str(base_dir.absolute() / "collection.anki2")
         logger.info(f"Initializing with collection: {self.collection_path}")
 
@@ -45,7 +51,10 @@ class AnkiConnectBridge(AnkiConnect):
             Response data in AnkiConnect format
         """
         if request.get("action") == "requestPermission":
-            return self.requestPermission(origin="", allowed=True)
+            return_value = self.requestPermission(origin="", allowed=True)
+            return web.format_success_reply(
+                get_ankiconnect_config()["apiVersion"], return_value
+            )
         return super().handler(request)
 
     def sync_auth(self) -> anki.sync.SyncAuth:
@@ -60,18 +69,31 @@ class AnkiConnectBridge(AnkiConnect):
     def _sync(self, mode: str | None = None):
         auth = self.sync_auth()
         col = self.collection()
+        logger.debug(f"Starting sync operation, mode={mode}")
         out = col.sync_collection(auth, True)  # TODO media enabled option
+        if out.new_endpoint:
+            logger.info(f"Sync - New endpoint requested: {out.new_endpoint}")
+        if out.server_message:
+            logger.info(f"Sync - Server message: {out.server_message}")
+
         accepted_sync_statuses = [out.NO_CHANGES, out.NORMAL_SYNC]
         status_str = anki.sync.SyncOutput.ChangesRequired.Name(out.required)
         if out.required not in accepted_sync_statuses:
             if mode in ["download", "upload"]:
                 col.close_for_full_sync()
-                col.full_upload_or_download(
-                    auth=auth,
-                    server_usn=out.server_media_usn,
-                    upload=(mode == "upload"),
-                )  # TODO media enabled option
-                col.reopen()
+                logger.debug("Collection closed for full sync")
+                try:
+                    col.full_upload_or_download(
+                        auth=auth,
+                        server_usn=out.server_media_usn,
+                        upload=(mode == "upload"),
+                    )  # TODO media enabled option
+                finally:
+                    logger.debug("Reopening collection")
+                    try:
+                        col.reopen()
+                    except Exception:  # FIXME
+                        pass
             else:
                 logger.info(f"Could not sync status {status_str}")
                 raise Exception(f"could not sync status {status_str} - use fullSync")
@@ -82,11 +104,15 @@ class AnkiConnectBridge(AnkiConnect):
         self._sync()
 
     @util.api()
-    def fullSync(self, mode: str):
+    def fullSync(self, mode: str):  # noqa: N802
+        if mode not in ["upload", "download"]:
+            raise ValueError("mode must be 'upload' or 'download'")
         self._sync(mode=mode)
 
+    # TODO check Media
+
     @util.api()
-    def checkDatabase(self):
+    def checkDatabase(self):  # noqa: N802
         problems, ok = self.collection().fix_integrity()
         if ok:
             logger.info("Database integrity check passed")
@@ -97,6 +123,18 @@ class AnkiConnectBridge(AnkiConnect):
                 (logger.info if ok else logger.error)(problem)
         return {"problems": problems, "ok": ok}
 
+    last_mod = 0
+
+    def is_modified(self):
+        """Check if the database has been modified since the last check."""
+        try:
+            new_mod = self.collection().mod
+            modified = new_mod != self.last_mod
+            self.last_mod = new_mod
+            return modified
+        except AttributeError:
+            return False  # Database not open for some reason (probably syncing) TODO?
+
     def close(self):
         """Clean up resources and close the Anki collection."""
         try:
@@ -105,3 +143,6 @@ class AnkiConnectBridge(AnkiConnect):
                 logger.info("Bridge resources cleaned up")
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
+
+    def collection(self) -> anki.collection.Collection:
+        return super().collection()

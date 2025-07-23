@@ -24,7 +24,7 @@ args = parser.parse_args()
 try:
     dotenv.load_dotenv()
 
-    if not (endpoint := args.endpoint or os.getenv("SYNC_ENDPOINT")):
+    if not (endpoint := args.endpoint or os.getenv("SYNC_ENDPOINT") or None):
         print("no endpoint specified or found in .env, using AnkiWeb")
     else:
         print(f"endpoint: {endpoint}")

@@ -7,7 +7,7 @@ while GUI method requests fail gracefully at the API level.
 import logging
 import sys
 from types import ModuleType
-from typing import Any, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +18,11 @@ class MinimalMock:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def __getattr__(self, name: str) -> 'MinimalMock':
+    def __getattr__(self, name: str) -> "MinimalMock":
         """Return another MinimalMock for any attribute access"""
         return MinimalMock()
 
-    def __call__(self, *args: Any, **kwargs: Any) -> 'MinimalMock':
+    def __call__(self, *args: Any, **kwargs: Any) -> "MinimalMock":
         """Allow the mock to be called - just return self for chaining"""
         return MinimalMock()
 
@@ -115,15 +115,16 @@ class MockAqt:
         self.mw = None  # Will be set by anki_mocks.setup_anki_environment()
         self.dialogs = MinimalMock()
         self.gui_hooks = MockGuiHooks()
-        
+
         # Create minimal submodules
         self.utils = MinimalMock()
         self.editor = MinimalMock()
         self.forms = MinimalMock()
         self.import_export = MinimalMock()
-        
+
         # Create Qt submodule
-        self.qt = create_mock_module('MockQtModule',
+        self.qt = create_mock_module(
+            "MockQtModule",
             Qt=MockQt,
             QTimer=MinimalMock,
             QMessageBox=MockQMessageBox,
@@ -135,50 +136,50 @@ class MockAqt:
         )
 
         # Create previewer module first
-        self._previewer_module = create_mock_module('PreviewerModule',
-            MultiCardPreviewer=MinimalMock
+        self._previewer_module = create_mock_module(
+            "PreviewerModule", MultiCardPreviewer=MinimalMock
         )
-        
+
         # Create browser submodule with previewer
-        self.browser = create_mock_module('BrowserModule',
-            previewer=self._previewer_module
+        self.browser = create_mock_module(
+            "BrowserModule", previewer=self._previewer_module
         )
 
         # Create editcurrent submodule
-        self.editcurrent = create_mock_module('EditCurrentModule',
-            EditCurrent=MinimalMock
+        self.editcurrent = create_mock_module(
+            "EditCurrentModule", EditCurrent=MinimalMock
         )
 
 
-def install_gui_stubs() -> Union[MockAqt, ModuleType]:
+def install_gui_stubs() -> MockAqt | ModuleType:
     """
     Install simplified GUI stubs by patching sys.modules.
-    
+
     Returns:
         The mock aqt module instance
     """
-    if 'aqt' in sys.modules:
+    if "aqt" in sys.modules:
         logger.debug("aqt module already exists, returning existing instance")
-        return sys.modules['aqt']
+        return sys.modules["aqt"]
 
     # Create mock aqt module
     mock_aqt = MockAqt()
 
     # Install main modules
-    sys.modules['aqt'] = mock_aqt  # type: ignore
-    sys.modules['aqt.qt'] = mock_aqt.qt  # type: ignore
-    sys.modules['aqt.editor'] = mock_aqt.editor  # type: ignore
-    sys.modules['aqt.editcurrent'] = mock_aqt.editcurrent  # type: ignore
-    sys.modules['aqt.forms'] = mock_aqt.forms  # type: ignore
-    sys.modules['aqt.browser'] = mock_aqt.browser  # type: ignore
-    sys.modules['aqt.browser.previewer'] = mock_aqt._previewer_module  # type: ignore
-    sys.modules['aqt.utils'] = mock_aqt.utils  # type: ignore
-    sys.modules['aqt.import_export'] = mock_aqt.import_export  # type: ignore
-    sys.modules['aqt.gui_hooks'] = mock_aqt.gui_hooks  # type: ignore
+    sys.modules["aqt"] = mock_aqt  # type: ignore
+    sys.modules["aqt.qt"] = mock_aqt.qt  # type: ignore
+    sys.modules["aqt.editor"] = mock_aqt.editor  # type: ignore
+    sys.modules["aqt.editcurrent"] = mock_aqt.editcurrent  # type: ignore
+    sys.modules["aqt.forms"] = mock_aqt.forms  # type: ignore
+    sys.modules["aqt.browser"] = mock_aqt.browser  # type: ignore
+    sys.modules["aqt.browser.previewer"] = mock_aqt._previewer_module  # type: ignore
+    sys.modules["aqt.utils"] = mock_aqt.utils  # type: ignore
+    sys.modules["aqt.import_export"] = mock_aqt.import_export  # type: ignore
+    sys.modules["aqt.gui_hooks"] = mock_aqt.gui_hooks  # type: ignore
 
     return mock_aqt
 
 
 # Auto-install stubs when this module is imported
-if 'aqt' not in sys.modules:
+if "aqt" not in sys.modules:
     install_gui_stubs()

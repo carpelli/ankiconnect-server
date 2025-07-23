@@ -5,7 +5,6 @@ from pathlib import Path
 from threading import Lock, Timer
 
 import jsonschema
-from anki.errors import SyncError
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from waitress import serve
@@ -90,9 +89,8 @@ def handle_request():
     # Handle request through AnkiConnectBridge
     try:
         with collection_lock:
-            before_mod = ankiconnect.collection().mod
             result = ankiconnect.handler(data)
-            collection_changed = before_mod != ankiconnect.collection().mod
+            collection_changed = ankiconnect.is_modified()
         logger.debug(f"Reply body: {result}")
         if action in ["sync", "fullSync"]:
             # disable/restart sync timers if we already synced
@@ -108,7 +106,7 @@ def handle_request():
         return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error processing request: {e}", exc_info=True)
-        return plugin.web.format_exception_reply(data.version, e), 500
+        return plugin.web.format_exception_reply(data.get("version", 6), e), 500
 
 
 def sync():
@@ -116,7 +114,7 @@ def sync():
         logger.info("Auto-syncing...")
         try:
             ankiconnect.sync()
-        except SyncError as e:
+        except Exception as e:
             logger.error(f"Error syncing: {e}")
 
 
@@ -124,8 +122,8 @@ def schedule_sync_after_mod():
     global sync_after_mod_timer
     if sync_after_mod_timer is not None:
         sync_after_mod_timer.cancel()
-    sync_timer = Timer(SYNC_AFTER_MOD_DELAY_SECONDS, sync)
-    sync_timer.start()
+    sync_after_mod_timer = Timer(SYNC_AFTER_MOD_DELAY_SECONDS, sync)
+    sync_after_mod_timer.start()
 
 
 def restart_periodic_sync():

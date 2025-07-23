@@ -14,7 +14,7 @@ SYNC_KEY = os.getenv("SYNC_KEY")
 
 ANKI_BASE_DIR = os.getenv("ANKI_BASE_DIR")
 
-LOGLEVEL = os.getenv("ANKICONNECT_LOGLEVEL", "INFO")
+LOGLEVEL = os.getenv("LOGLEVEL", "INFO")
 
 
 def get_ankiconnect_config():
