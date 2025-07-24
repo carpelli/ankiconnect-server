@@ -7,15 +7,16 @@ RUN uv sync --frozen --no-dev
 
 FROM python:3.12-slim
 
-RUN useradd --create-home --shell /bin/bash app
+RUN addgroup --gid 1000 app
+RUN adduser --uid 1000 --gid 1000 --home /app app
 
 WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
-COPY . /app/
+COPY --chown=app:app . /app/
 
 # Create data directory and set permissions
-RUN mkdir -p /data && chown -R app:app /app /data
+RUN mkdir /data && chown app:app /data
 
 # Switch to non-root user
 USER app

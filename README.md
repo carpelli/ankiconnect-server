@@ -1,6 +1,6 @@
 # AnkiConnect Server
 
-A lightweight server wrapper for the AnkiConnect plugin that runs without requiring Anki desktop or the full PyQt GUI stack.
+A lightweight server wrapper for the [AnkiConnect plugin](https://git.sr.ht/~foosoft/anki-connect/) that runs without requiring Anki desktop or the full PyQt GUI stack.
 
 The server passes all requests to the original AnkiConnect plugin using minimal GUI stubs. AnkiConnect clients should work as-is, and updates to the original plugin are easily incorporated. GUI requests are not tested, but should return appropriate fallback responses.
 
