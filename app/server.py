@@ -17,6 +17,7 @@ from app.config import (
     HOST,
     LOGLEVEL,
     PORT,
+    SYNC_KEY,
     get_ankiconnect_config,
 )
 from app.core import AnkiConnectBridge
@@ -188,4 +189,6 @@ if __name__ == "__main__":
         logger.info("API key authentication enabled")
     else:
         logger.warning("No API key set (consider setting ANKICONNECT_API_KEY)")
+    if SYNC_KEY and SYNC_KEY[0] in "'\"":
+        logger.warning("Sync key starts quotation mark, is this intended?")
     run_server(base_dir)

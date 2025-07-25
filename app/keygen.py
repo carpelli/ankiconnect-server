@@ -43,6 +43,8 @@ try:
             hkey = col.sync_login(user, password, endpoint).hkey
     except SyncError as e:
         print(e)
+        if user[0] in "'\"":
+            print("Did you mean for the user name to contain quotes?")
         exit(1)
 
     print(f"key: {hkey}")
